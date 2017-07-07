@@ -1,2 +1,5 @@
 # multichannel_systems_stg_matlab
-Interface to Multichannel Systems Stimulus Generators in Matlab
+
+Matlab interface to Multichannel Systems' Stimulus Generators (STG) in Matlab
+
+I'm just getting started ...
