@@ -38,16 +38,30 @@ classdef device_list_entry < sl.obj.display_class
             obj.product = char(h.Product);
             obj.manufacturer = char(h.Manufacturer);
         end
-        function device = getDownloadBasicInterface(obj)
-            %
-            %   device = getDownloadBasicInterface(obj)
-            
-            device = Mcs.Usb.CStg200xDownloadBasicNet();
-            device.Connect(obj.h);
-        end
+        
+            %Apparently the underlying class is declared as Abstract
+%         function device = getDownloadBasicInterface(obj)
+%             %
+%             %   device = getDownloadBasicInterface(obj)
+%             %
+%             %   Outputs
+%             %   -------
+%             %   device : mcs.stg.sdk.cstg200x_download_basic
+%             
+%             d = Mcs.Usb.CStg200xDownloadBasicNet();
+%             error_code = d.Connect(obj.h);
+%             mcs.stg.sdk.handleError(ERR_ID,'Failed to connect to the device',error_code)
+%             
+%             device = mcs.stg.sdk.cstg200x_download_basic(d);
+% 
+%         end
         function device = getDownloadInterface(obj)
             %
             %   device = getDownloadInterface(obj)
+            %
+            %   Outputs
+            %   -------
+            %   device : mcs.stg.sdk.cstg200x_download
             
             ERR_ID = 'mcs:stg:device_list_entry:getDownloadInterface';
             

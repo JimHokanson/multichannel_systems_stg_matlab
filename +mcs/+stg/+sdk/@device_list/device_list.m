@@ -59,6 +59,10 @@ classdef device_list < sl.obj.display_class
             %x Retrieve a specific entry by index
             %
             %   entry = getEntry(obj,index_1b)
+            %
+            %   Outputs
+            %   -------
+            %   entry : mcs.stg.sdk.device_list_entry
             
             ERR_ID = 'mcs:stg:device_list:getEntry';
             

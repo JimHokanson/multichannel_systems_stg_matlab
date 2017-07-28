@@ -6,6 +6,22 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     %   Wraps:
     %   Mcs.Usb.CStg200xDownloadNet
     
+    %{
+    d.setCurrentMode();
+    pt2 = 200*mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2,'n_trains',1,'output_type','current');
+    
+    d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
+    d.setVoltageMode();
+    pt2 = 200*mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2,'n_trains',1,'output_type','voltage');
+    
+    d.setupTrigger('first_trigger',1,'repeat',0)
+    
+    d.sentDataToDevice(1,pt2);
+    
+    d.sendStart(1);
+    d.sendStop(1);
+    %}
+    
     properties
         
     end
@@ -33,38 +49,59 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
             
             obj = obj@mcs.stg.sdk.cstg200x_download_basic(h);
         end
-        function prepareAndSendData(obj,channel,amplitude,duration,dest_type)
-            %
+    end
+    methods
+        function sentDataToDevice(obj,channel_1b,data,varargin)
+           %
+           %    
+           %    Inputs
+           %    ------
+           %    channel_1b : 
+           %    data : mcs.stg.pulse_train OR ...
+           %    
+           %
+           %    Optional Inputs
+           %    ---------------
+           %    mode : string
+           %        - 'new' (default)
+           %        - 'append'
+           %    target :
+           %        - 'sync'
+           %        - 'current'
+           %        - 'voltage'
+           %
+           %    TODO: Does specifying current or voltage change the mode?
+           %
+           %
+           %    Implements
+           %    ----------
+           %    prepareAndSendData
+           %    PrepareAndAppendData 
+           
+           in.mode = 'new';           
+           [a,d] = data.getStimValues();
+           
+           %TODO: Allow specifying sync as well
+           
+
+           if strcmp(data.output_type,'voltage')
+              type = Mcs.Usb.STG_DestinationEnumNet.channeldata_voltage;
+           else
+              type = Mcs.Usb.STG_DestinationEnumNet.channeldata_current;
+           end
+
+           
+           channel_0b = uint32(channel_1b-1);
+           
+           switch in.mode
+               case 'append'
+                   obj.h.PrepareAndAppendData(channel_0b, a, d, type);
+               case 'new'
+                   obj.h.PrepareAndSendData(channel_0b, a, d, type);
+               otherwise
+                   error('Unrecognized mode')
+           end
             
-%                     Amplitude = int32([+1e5 -1e5 0]);  	
-%         Duration = uint64([1000 1000 1e6]);  % Duration in us
-% 
-%         AmplitudeNet = NET.convertArray(Amplitude, 'System.Int32');
-%         DurationNet  = NET.convertArray(Duration, 'System.UInt64');
-%                    	device.PrepareAndSendData(0, Amplitude, Duration, Mcs.Usb.STG_DestinationEnumNet.channeldata_current);
-% 
-%     
-%         device.PrepareAndSendData(0, AmplitudeNet, DurationNet, STG_DestinationEnumNet.channeldata_voltage);
-            
-            
-            
-                    %             Prepare and send data to a given channel on the STG. Previous data sent to that channel is erased first. 
-                    % 
-                    % Each datapoint is represented by an signed 32bit integer value. When using voltage stimulation, the values are in multiple of 1 uV, thus the possible range is += 2000 V. When using current stimulation, the values are in multiple of 1 nA, this the possible range is += 2000 mA. 
-                    % 
-                    % The duration is given as a list of 64 bit integers. Durations are given in units of µs. The STG has a resolution of 20 µs.
-                    % 
-                    % Parameters:
-                    % channel The channel number to send data to. 
-                    % Amplitude A list of datapoints as int32. 
-                    % Duration A list of durations as uint64. The time is given in units of µs. 
-                    % dest_type specifies wheather the data is for syncout, current or voltage stimulation.
-                    
-                    
-                    
-                    
-                    
-                
         end
     end
     

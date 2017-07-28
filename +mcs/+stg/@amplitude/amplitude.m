@@ -3,7 +3,7 @@ classdef amplitude
     %   Class:
     %   mcs_stg.amplitude
     %
-    %   
+    %   Not currently used
     
     properties
     end

@@ -47,7 +47,22 @@ classdef sdk < handle
             p = sl.stack.getMyBasePath;
             
             dll = NET.addAssembly(fullfile(p,VER_FOLDER,'McsUsbNet.dll'));
+            %Mcs.Usb
             
+            %{
+            NET.addAssembly('D:\repos\net_project\McsLibrary\McsLibrary\bin\x64\Release\McsLibrary.dll');
+            temp = McsLibrary.WTF(d.h);
+            
+            wtf2 = cell(temp.getNewData(d.h));
+            uint32(wtf2{1})
+            uint32(wtf2{2})
+            wtf2 = cell(temp.getTrigger(d.h));
+            
+            [output,wtf] = captureConsole
+            wtf2 = cell(wtf);
+            
+            McsLibrary.WTF.
+            %}
         end
     end
     
@@ -72,18 +87,30 @@ device = CStg200xDownloadNet();
 device.Connect(deviceList.GetUsbListEntry(0));
 
 
+device = d.h;
+
 device.SetVoltageMode();
 
+device.SetupTrigger(0,1,1,0)
 
+Amplitude = int32([+2000000 0 -3000000  -2000000 2000000]);  % Amplitude in uV
+Duration = uint64([1e5 1e5 1e6 1e5 1e5]);  % Duration in us
 
-Amplitude = int32([+2000000 -2000000]);  % Amplitude in uV
-Duration = uint64([100000 100000]);  % Duration in us
+Amplitude = int32([+2000000 -2000000 0]);  % Amplitude in uV
+Duration = uint64([100000 100000 1e6]);  % Duration in us
 
 AmplitudeNet = NET.convertArray(Amplitude, 'System.Int32');
 DurationNet  = NET.convertArray(Duration, 'System.UInt64');
 
-device.PrepareAndSendData(0, AmplitudeNet, DurationNet, STG_DestinationEnumNet.channeldata_voltage);
+device.ClearChannelData(0);
+%device.PrepareAndSendData(0, Amplitude, Duration, Mcs.Usb.STG_DestinationEnumNet.channeldata_voltage);
+
+device.PrepareAndSendData(0, AmplitudeNet, DurationNet, Mcs.Usb.STG_DestinationEnumNet.channeldata_voltage);
 device.SendStart(1);
+
+[a,b] = device.GetCapacity();
+a = uint32(a);
+b = uint32(b);
 
 device.Disconnect();
 
