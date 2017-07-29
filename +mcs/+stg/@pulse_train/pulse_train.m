@@ -5,29 +5,48 @@ classdef pulse_train < matlab.mixin.Copyable
     %
     %   Constructors
     %   ------------
-    %   fixed_rate
-    
-    %{
-
-    pt1 = mcs.stg.pulse_train.fixed_rate(10);
-    pt2 = mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2);
-
-    %}
-    
-    properties
-        output_type %'v', or 'c'
+    %   mcs.stg.pulse_train.fixed_rate
+    %   mcs.stg.pulse_train.fromTimes
+    %
+    %   See Also
+    %   --------
+    %   mcs.stg.waveform
         
-        amplitudes %Amplitude is in uA or mV
-        durations %Durations are in seconds
+    properties
+        output_type  %'voltage' or 'current'
+        
+        amplitudes   %Amplitude is in uA or mV
+        durations    %Durations are in seconds
         start_times
         stop_times
         total_duration_s
         
-        %TODO: Build in support for different plotting units ...
     end
     
     methods (Static)
+        function obj = fromTimes(times,varargin)
+            %
+            %
+            %   
+            
+            in.amp_units = 'uA';
+            in.waveform = []; %mcs.stg.waveform
+            in = sl.in.processVarargin(in,varargin);
+            
+            if isempty(in.waveform)
+                waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
+            else
+                waveform = in.waveform;
+            end
+            
+            %JAH: At this point ...
+            
+            keyboard
+            
+        end
         function obj = fixed_rate(rate,varargin)
+            %
+            %   obj = fixed_rate(rate,varargin)
             %
             %   Inputs
             %   ------
@@ -36,31 +55,40 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   Optional Inputs
             %   ---------------
-            %   output_type :
-            %       - 'current' (default)
-            %       - 'voltage' 
-            %   waveform : default 1 uA, 100 us
-            %       The waveform that gets replicated
+            %   amp_units : string
+            %       - 'mA'
+            %       - 'uA' (default)
+            %       - 'nA'
+            %       - 'mV'
+            %   waveform : default 1 amp_unit, 100 us, biphasic
+            %       The waveform that gets replicated.
             %
             %   n_pulses : 
             %   pulses_duration :
+            %       
             %
             %   trains_rate :
+            %       Rate of repetition of a series of pulses.
             %
             %   n_trains : 
             %   trains_duration : 
+            %
+            %   Improvements
+            %   ------------
+            %   1) Clarify meaning of duration (start of pulse? end of
+            %   pulse? - what detrmines # of pulses?
             %
             %   Examples
             %   --------
             %   % 1) 10 Hz pulse train
             %   pt1 = mcs.stg.pulse_train.fixed_rate(10);
             %
-            %   % 2) 
+            %   % 2) 3 pulses at 40 Hz, repeated at 2 Hz
             %   pt2 = mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2);
             
             ERR_ID = 'mcs:stg:pulse_train:fixed_rate';
             
-            in.output_type = 'current';
+            in.amp_units = 'uA';
             in.waveform = []; %mcs.stg.waveform
             %-----------------------------
             in.n_pulses = [];
@@ -69,20 +97,11 @@ classdef pulse_train < matlab.mixin.Copyable
             in.train_rate = [];
             in.n_trains = [];
             in.trains_duration = [];
-            %-----------------------------
-            %in.terminate = true;
-            
+            %-----------------------------            
             in = sl.in.processVarargin(in,varargin);
             
             if isempty(in.waveform)
-                switch in.output_type
-                    case 'current'
-                        waveform = mcs.stg.waveform.biphasic(1,0.1);
-                    case 'voltage'
-                        waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units','mV');
-                    otherwise
-                        error('Unrecognized "output_type" option')
-                end
+                waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
             else
                 waveform = in.waveform;
             end
@@ -181,6 +200,10 @@ classdef pulse_train < matlab.mixin.Copyable
             sl.plot.postp.scaleAxisLimits();
         end
         function out = mtimes(a,b)
+            %x Multiply by scalar
+            %   
+            %   This allows us to scale the object by a given value
+            
             if isobject(a)
                 m = b;
                 obj = a;
