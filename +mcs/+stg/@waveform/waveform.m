@@ -4,39 +4,26 @@ classdef waveform < handle
     %   mcs.stg.waveform
     %
     %   A collection of amplitudes and durations.
-    
-    %{
-    
-
-    waveform
-        - replicatable - becomes waveforms
-    waveforms - with spacing
-        - convertable to pattern
-        - replicatable
-    
-    
-    pulse_train
-        - regular, rate based
-        - nested?
-            - for bursting
+    %
+    %   Constructors
+    %   ------------
+    %   mcs.stg.waveform.biphasic
         
-        - 3 pulses
-        -
-    %}
-    
     properties
         output_type     %'current' or 'voltage'
+        
         shape_type
         %- monophasic
         %- biphasic
         %- arbitrary
         
         %This will all be in standard units
-        amplitudes     %uA or mV
-        internal_amp_units
+        amplitudes     
+        internal_amp_units %either uA or mV
         
         durations_ms   %ms
         durations_s
+        
         start_times_ms %ms
         stop_times_ms %ms
         total_duration_ms
@@ -58,10 +45,34 @@ classdef waveform < handle
             %
             %   obj = mcs.stg.waveform.biphasic(amplitude,duration,varargin)
             %
+            %   Inputs
+            %   ------
+            %   amplitude : 
+            %   duration : 
+            %
+            %   Optional Inputs
+            %   ---------------
+            %   amp_units : 
+            %       - 'mA'
+            %       - 'uA' (default)
+            %       - 'nA'
+            %       - 'V'
+            %       - 'mV'
+            %       - 'uV'
+            %   duration_units : 
+            %       - 's'
+            %       - 'ms' (default)
+            %       - 'us'
+            %
             %   Example
             %   ---------------------
             %   %1 uA, 0.1 ms duration
             %   w = mcs.stg.waveform.biphasic(1,0.1)
+            %
+            %   Improvements
+            %   ------------
+            %   1) Allow ratio/duration scaling
+            %   2) Allow spacing between pulses
             
             in.amp_units = 'uA';
             in.duration_units = 'ms';
@@ -70,7 +81,6 @@ classdef waveform < handle
             obj = mcs.stg.waveform();
             obj.shape_type = 'biphasic';
             
-            %TODO: Allow ratio and duration scaling ...
             amplitudes = [amplitude -amplitude];
             
             h__processAmplitudes(obj,amplitudes,in.amp_units)
@@ -82,7 +92,6 @@ classdef waveform < handle
     
     methods
         function plot(obj)
-            %TODO: 
             plot_amplitudes = obj.amplitudes * obj.amp_scalar__prop_to_disp;
             plot_starts = obj.start_times_ms*obj.dur_scalar__prop_to_disp;
             plot_ends = obj.stop_times_ms*obj.dur_scalar__prop_to_disp;
