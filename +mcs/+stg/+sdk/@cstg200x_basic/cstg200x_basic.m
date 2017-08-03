@@ -131,47 +131,68 @@ classdef cstg200x_basic < sl.obj.display_class
         function getAnalogResolution(obj)
             
         end
-        function startStim(obj,trigger_map)
+        function startStim(obj,varargin)
             %x Start the program
             %
-            %   Inputs
-            %   ------
-            %   trigger_map:
-            %       bit-mask of trigger inputs
+            %   startStim(obj,varargin)
+            %
+            %   Optional Inputs
+            %   ----------------
+            %   triggers : array, default all
+            %       Which triggers to start.
             %
             %   Example
             %   --------------------------
             %   Start triggers 1 & 2
-            %   d.startStim(1+2)
-            %
+            %   d.startStim('triggers',1:2)
+            
+            %   TODO: Let's add an optional check for the program being
+            %   present ...
             %   TODO: What happens if there is no program? Silent fail?
             
+            in.triggers = [];
+            in = mcs.sl.in.processVarargin(in,varargin);
             
-            obj.h.SendStart(uint32(trigger_map));
+            if isempty(in.triggers)
+                n_triggers = obj.n_trigger_inputs;
+                in.triggers = 1:n_triggers;
+            end
+            
+            trigger_map = mcs.utils.bitmask({in.triggers});
+            
+            obj.h.SendStart(uint32(trigger_map.values));
         end
-        function stopStim(obj,trigger_map,options)
+        function stopStim(obj,varargin)
             %x Stop the program
             %
-            %   Inputs
-            %   ------
-            %   trigger_map:
-            %       bit-mask of trigger inputs
+            %   stopStim(obj,varargin)
             %
-            %   Optional
+            %   Optional Inputs
+            %   ----------------
+            %   triggers : array, default all
+            %       Which triggers to stop.
             %
             %   Example
             %   --------------------------
             %   1) Stop triggers 1 & 2
-            %
-            %   d.stopStim(1+2)
+            %   d.stopStim('triggers',1:2)
             %
             %   See Also
             %   --------
             %   mcs.stg.sdk.cstg200x_download_basic.getTrigger
             %   mcs.stg.sdk.cstg200x_download_basic.setupTrigger
             
+            in.triggers = [];
+            in = mcs.sl.in.processVarargin(in,varargin);
             
-            obj.h.SendStop(trigger_map);
+            if isempty(in.triggers)
+                n_triggers = obj.n_trigger_inputs;
+                in.triggers = 1:n_triggers;
+            end
+            
+            trigger_map = mcs.utils.bitmask({in.triggers});
+
+            obj.h.SendStop(trigger_map.values);
         end
         function setCurrentMode(obj,channels_1b)
             %

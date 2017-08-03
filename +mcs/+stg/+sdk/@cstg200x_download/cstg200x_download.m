@@ -22,8 +22,8 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     
     d.sentDataToDevice(1,pt2);
     
-    d.sendStart(1);
-    d.sendStop(1);
+    d.startStim(1);
+    d.stopStim(1);
     %}
     
     properties
@@ -56,7 +56,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     end
     methods
         function sentDataToDevice(obj,channel_1b,data,varargin)
-           %
+           %x Sends data to the device
            %    
            %    Inputs
            %    ------
@@ -76,13 +76,18 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %
            %    TODO: Does specifying current or voltage change the mode?
            %
-           %
+           %    See Also
+           %    ---------
+           %    
+           
+           
            %    Implements
            %    ----------
            %    prepareAndSendData
            %    PrepareAndAppendData 
            
-           in.mode = 'new';           
+           in.mode = 'new';  
+           in.mirror_to_sync = false;
            [a,d] = data.getStimValues();
            
            %TODO: Allow specifying sync as well

@@ -51,7 +51,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     
     
     properties
-        d1 = '-------- mcs.stg.sdk.cstg200x_download_basic -------' 
+        d2 = '-------- mcs.stg.sdk.cstg200x_download_basic -------' 
     end
     
     properties (Dependent)
@@ -79,7 +79,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         function value = get.n_sweeps(obj)
             
         end
-        function vlaue = get.n_triggers(obj)
+        function value = get.n_triggers(obj)
             
         end
     end
@@ -112,17 +112,18 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
         end
         function setupTrigger(obj,varargin)
+            %x  Setup trigger configuration
             %
+            %   setupTrigger(obj,varargin)
             %
             %   Optional Inputs
             %   ---------------
-            %   first_trigger : default 1
+            %   first_trigger : default 1  CURRENTLY NOT WORKING, BUG IN DLL
             %       If this is not 1, it allows updating starting
             %       at a different trigger index.
-            %       THIS DOESN'T SEEM TO WORK ...
-            %   channel_map : [1 x n_triggers (max)] or 'mcs.utils.bitmask'
-            %   syncout_map : [1 x n_triggers (max)]
-            %   repeat : [1 x n_triggers (max)]
+            %   channel_maps : [1 x n_triggers (max)] or 'mcs.utils.bitmask'
+            %   syncout_maps : [1 x n_triggers (max)]
+            %   repeats : [1 x n_triggers (max)]
             %       # of times to repeat the stimulus. 0 means forever.
             %
             %   Examples (Note 'd' is instance of the object)
@@ -132,11 +133,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %
             %   % 2) Change to a 1 to 1 mapping for the first 2 triggers
             %   map = mcs.utils.bitmask({1 2}); %{} is important
-            %   d.setupTrigger('channel_map',map,'syncout_map',map)
+            %   d.setupTrigger('channel_maps',map,'syncout_map',map)
             %
             %   % 2.5) ...
             %   map = mcs.utils.bitmask({1 2 [3 4]});
-            %   d.setupTrigger('channel_map',map,'syncout_map',map,'first_trigger',2)
+            %   d.setupTrigger('channel_maps',map,'syncout_map',map,'first_trigger',2)
             %
             %   % 3) Let trigger 2 start 2 & 3 together, with trigger 4
             %   %    targeting 4. Syncouts will be updated so that
@@ -146,109 +147,95 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   %from an array ([2 3]) to a single value.
             %   c_map = mcs.utils.bitmask({[2 3],0,4});
             %   s_map = mcs.utils.bitmask({2,0,4});
-            %   d.setupTrigger('first_trigger',2,'channel_map',c_map,'syncout_map',s_map);
+            %   d.setupTrigger('first_trigger',2,'channel_maps',c_map,'syncout_maps',s_map);
             %
+            %
+            %   Improvement
+            %   ------------
+            %   1) Allow passing in the trigger (or perhaps better yet
+            %   allow the trigger to update based on set methods)
             
             ERR_ID = 'mcs:stg:sdk:cstg200x_download_basic';
             
-            %TODO: Allow passing in the trigger directly ...
             in.first_trigger = 1;
-            in.channel_map = [];
-            in.syncout_map = [];
-            in.repeat = [];
-            in = sl.in.processVarargin(in,varargin);
+            in.channel_maps = [];
+            in.syncout_maps = [];
+            in.repeats = [];
+            in = mcs.sl.in.processVarargin(in,varargin);
             
+            %The default trigger settings
             t = obj.getTrigger();
             
             I = in.first_trigger;
             
             %Bitmask to array conversions
             %----------------------------------------
-            if isa(in.channel_map,'mcs.utils.bitmask')
-                in.channel_map = in.channel_map.value;
+            if isa(in.channel_maps,'mcs.utils.bitmask')
+                in.channel_maps = in.channel_maps.values;
             end
             
-            if isa(in.syncout_map,'mcs.utils.bitmask')
-                in.syncout_map = in.syncout_map.value;
+            if isa(in.syncout_maps,'mcs.utils.bitmask')
+                in.syncout_maps = in.syncout_maps.values;
             end
             
             %Length check and retrieval of default values
             %--------------------------------------------
-            n_max = max([length(in.channel_map),length(in.syncout_map),length(in.repeat)]);
+            n_max = max([length(in.channel_maps),length(in.syncout_maps),length(in.repeats)]);
             if n_max == 0
                 error(ERR_ID,'Incorrect usage of function, all aray inputs empty')
+            %elseif n_max > length
             end
             
             %TODO: Check that n_max doesn't exceed the # of triggers
             
             %Check length, must be the same or empty
-            if isempty(in.channel_map)
-                in.channel_map = t.channel_map.value(I:I+n_max-1);
-            elseif length(in.channel_map) ~= n_max
+            if isempty(in.channel_maps)
+                in.channel_maps = t.channel_maps.values(I:I+n_max-1);
+            elseif length(in.channel_maps) ~= n_max
                 error(ERR_ID,'Mismatch in length between the max # of elements input and the channel_map array length')
             end
             
-            if isempty(in.syncout_map)
-                in.syncout_map = t.syncout_map.value(I:I+n_max-1);
-            elseif length(in.syncout_map) ~= n_max
+            if isempty(in.syncout_maps)
+                in.syncout_maps = t.syncout_maps.values(I:I+n_max-1);
+            elseif length(in.syncout_maps) ~= n_max
                 error(ERR_ID,'Mismatch in length between the max # of elements input and the syncout_map array length')
             end
             
-            if isempty(in.repeat)
-                in.repeat = t.repeat(I:I+n_max-1);
-            elseif length(in.repeat) ~= n_max
+            if isempty(in.repeats)
+                in.repeats = t.repeats(I:I+n_max-1);
+            elseif length(in.repeats) ~= n_max
                 error(ERR_ID,'Mismatch in length between the max # of elements input and the repeat array length')
             end
             
             %--------------------------------------------------------
             first_trigger_0b = in.first_trigger-1;
             
-            %This is likely not working ....
-            
             obj.h.SetupTrigger(uint32(first_trigger_0b),...
-                uint32(in.channel_map),uint32(in.syncout_map),uint32(in.repeat))
-            
+                uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats))
         end
         
         function trigger = getTrigger(obj)
-            %
+            %x Retrieves the trigger setup info
             %
             %   Outputs
             %   -------
             %   trigger : mcs.stg.trigger
-            
-            
-            %This is not working ....
-            %In particular, repeats is causing problems ...
-            %
-            %   Are we not getting array duplication?
-            %   but then c2 should equal s2 and r2, which it is not
-            %
-            %   The problem is with the repeats ...
-            
-            %Intersting, it seems like instead we need
-            %Although we might need to pass in the inputs
-            %as well
-            
-            %keyboard
-            %[c2,s2,r2] = obj.h.GetTrigger();
-            
-            %z = uint32(zeros(1,obj.n_trigger_inputs));
-            
-            %             c2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
-            %             s2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
-            %             r2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
-            %
+
             h = obj.h;
             
             [c2,s2,r2] = GetTrigger(h);
             
-            trigger = mcs.stg.trigger.fromSDK(uint32(c2),uint32(s2),uint32(r2),...
+            trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
                 obj.n_analog_channels,obj.n_syncout_channels);
         end
         function setChannelCapacity(obj)
             
+            %The GetCapacity is broken, so we'll wait on this until
+            %that is fixed.
+            %
+            %Segment support?
             
+            error('Not yet implemented')
             
             %             Configures the memory layout of the current segment in
             %             download mode.
@@ -268,19 +255,21 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %d.h.SetCapacity(uint32([1000 1000 1000 1000]),uint32([1000 1000 1000 1000]))
             
             %{
-           a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-           b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-           d.h.SetCapacity(a,b);
+                a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
+                b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
+                d.h.SetCapacity(a,b);
             %}
             
         end
         function chan_capacity = getChannelCapacity(obj)
-            %
+            %x Retrieve the # of bytes that each channel can store
             %   In 
             [a,~] = obj.h.GetCapacity();
             chan_capacity = uint32(a);
         end
         function sync_capacity = getSyncCapacity(obj)
+            %x Retrieve the # of bytes that each sync channel can store
+            
             [~,b] = obj.h.GetCapacity();
             sync_capacity = uint32(b);
         end
