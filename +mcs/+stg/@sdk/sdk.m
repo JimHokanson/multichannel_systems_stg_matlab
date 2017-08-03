@@ -3,21 +3,19 @@ classdef sdk < handle
     %   Class:
     %   mcs.stg.sdk
     %
+    %   Source of Stimulator DLL:
     %   http://www.multichannelsystems.com/software/mcsusbnetdll
     %
-    %   Actual Stimulator installation software?
+    %   Stimulator software:
     %   http://www.multichannelsystems.com/software/mc-stimulus-ii
     %
     %   Forum:
     %   http://multichannelsystems.forumieren.de/
+    %
+    %
     
-    
-    %Not sure what functionality we want to explore in this class.
-    
-    %TODO: Functionality, detect # of devices again
-    
-    
-    properties
+    properties (Constant)
+        DRIVER_VERSION = '3_2_71'
     end
     
     methods (Static)
@@ -38,20 +36,21 @@ classdef sdk < handle
             %
             %   obj = mcs.stg.sdk()
             
-            %Note, the _v20 means using .NET 2.0 framework, versus
-            %the the normal file which uses 4
-            
-            VER_FOLDER = '3_2_45';
+            %Note, the _v20 in the dll name means using .NET 2.0 framework, 
+            %versus the the normal file which uses 4
             
             %TODO: Move into local package
             p = sl.stack.getMyBasePath;
             
-            dll = NET.addAssembly(fullfile(p,VER_FOLDER,'McsUsbNet.dll'));
+            dll = NET.addAssembly(fullfile(p,obj.DRIVER_VERSION,'McsUsbNet.dll'));
             %Mcs.Usb
             
             %{
             NET.addAssembly('D:\repos\net_project\McsLibrary\McsLibrary\bin\x64\Release\McsLibrary.dll');
             temp = McsLibrary.WTF(d.h);
+            
+            wtf2 = cell(temp.getTrigger)
+            
             
             wtf2 = cell(temp.getNewData(d.h));
             uint32(wtf2{1})

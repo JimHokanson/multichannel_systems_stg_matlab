@@ -7,19 +7,21 @@ classdef cstg200x_basic < sl.obj.display_class
     %   --------
     %   mcs.stg.sdk.cstg200x_download_basic
     %   mcs.stg.sdk.cstg200x_download
-    
-    
+    %   mcs.stg.sdk
     
     %{
-    d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
+        Test Code
+        ---------
+        d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
     %}
-    
     
     properties (Hidden)
         h
     end
     
     properties
+        driver_version
+        d1 = '---- mcs.stg.sdk.cstg200x_basic ----'
         serial_number
         channel_modes
     end
@@ -31,8 +33,8 @@ classdef cstg200x_basic < sl.obj.display_class
         n_trigger_inputs
         
         %Throwing errors
-        %n_hardware_dacs
-        %         output_rate
+        %   n_hardware_dacs
+        %  	output_rate
         
         version_info
         voltage_resolution_uV
@@ -61,25 +63,20 @@ classdef cstg200x_basic < sl.obj.display_class
         end
         
         %This is throwing an error
-%         function value = get.n_hardware_dacs(obj)
-%             Message: HCD return STALL PID
-%             Source: McsUsbNet
-%             HelpLink:
-%             value = double(obj.h.GetNumberOfHWDACPaths);
-%         end
-        
+        %         function value = get.n_hardware_dacs(obj)
+        %             Message: HCD return STALL PID
+        %             Source: McsUsbNet
+        %             HelpLink:
+        %             value = double(obj.h.GetNumberOfHWDACPaths);
+        %         end
         %This is throwing an error
         %         function value = get.output_rate(obj)
         %             Message: HCD return STALL PID
         %             Source: McsUsbNet
         %             value =  double(obj.h.GetOutputRate);
         %         end
+        
         function value = get.version_info(obj)
-            value = []; %TODO
-            %             void GetStgVersionInfo  ( [Out] String^ %  SwVersion,
-            %   [Out] String^ %  HwVersion
-            %  )
-            
             [a,b] = obj.h.GetStgVersionInfo();
             value = mcs.stg.sdk.stg_version_info;
             value.software_version = char(a);
@@ -93,12 +90,14 @@ classdef cstg200x_basic < sl.obj.display_class
                 value(i) = double(obj.h.GetVoltageResolutionInMicroVolt(i-1));
             end
         end
-        
+
     end
     
     methods
         function obj = cstg200x_basic(h)
             obj.h = h;
+            
+            obj.driver_version = mcs.stg.sdk.DRIVER_VERSION;
             
             obj.serial_number = char(h.SerialNumber);
             
@@ -132,7 +131,7 @@ classdef cstg200x_basic < sl.obj.display_class
         function getAnalogResolution(obj)
             
         end
-        function sendStart(obj,trigger_map)
+        function startStim(obj,trigger_map)
             %x Start the program
             %
             %   Inputs
@@ -142,15 +141,15 @@ classdef cstg200x_basic < sl.obj.display_class
             %
             %   Example
             %   --------------------------
-            %   Start channels 1 & 2
-            %   d.sendStart(1+2)
+            %   Start triggers 1 & 2
+            %   d.startStim(1+2)
             %
             %   TODO: What happens if there is no program? Silent fail?
             
             
             obj.h.SendStart(uint32(trigger_map));
         end
-        function sendStop(obj,trigger_map,options)
+        function stopStim(obj,trigger_map,options)
             %x Stop the program
             %
             %   Inputs
@@ -162,9 +161,9 @@ classdef cstg200x_basic < sl.obj.display_class
             %
             %   Example
             %   --------------------------
-            %   1) Start triggers 1 & 2
+            %   1) Stop triggers 1 & 2
             %
-            %   d.sendStart(1+2)
+            %   d.stopStim(1+2)
             %
             %   See Also
             %   --------

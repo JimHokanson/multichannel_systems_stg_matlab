@@ -4,7 +4,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     %   mcs.stg.sdk.cstg200x_download_basic
     %
     %   Wraps:
-    %   Mcs.Usb.CStg200xDownloadBasicNet
+    %   Mcs.Usb.CStg200xDownloadBasicNet (An abtract class)
     %
     %   See Also
     %   --------
@@ -13,10 +13,13 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     
     %{
     
-            d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
-            pt2 = 500*mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2,'n_trains',6);
-            d.sentDataToDevice(1,pt2);
-            d.setupTrigger('first_trigger',1,'repeat',0)
+        Test Code
+        ---------
+    
+    	d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
+    	pt2 = 500*mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2,'n_trains',6);
+    	d.sentDataToDevice(1,pt2);
+      	d.setupTrigger('first_trigger',1,'repeat',0)
             
             a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
            b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
@@ -46,39 +49,40 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     
     %}
     
+    
+    properties
+        d1 = '-------- mcs.stg.sdk.cstg200x_download_basic -------' 
+    end
+    
     properties (Dependent)
-       trigger_settings 
-       channel_capacity_current_segment
-       n_sweeps
-       n_triggers
+        trigger_settings   %mcs.stg.trigger
+        
+        channel_capacity_current_segment  %Currently broken
+        %Should be the # of bytes available per channel
+        
+        sync_capacity_current_segment
+        
+        n_sweeps
+        n_triggers
     end
     
     methods
         function value = get.trigger_settings(obj)
-           value = obj.getTrigger(); 
+            value = obj.getTrigger();
         end
         function value = get.channel_capacity_current_segment(obj)
-           value =  obj.getChannelCapacity();
+            value = obj.getChannelCapacity();
+        end
+        function value = get.sync_capacity_current_segment(obj)
+            value = obj.getSyncCapacity();
+        end
+        function value = get.n_sweeps(obj)
+            
+        end
+        function vlaue = get.n_triggers(obj)
+            
         end
     end
-    
-    %Apparently the underlying class is declared as Abstract
-    %-------------------------------------------------------
-%     methods (Static)
-%         function obj = fromIndex(index_1b)
-%             %x Create instance from device list index
-%             %
-%             %   obj = mcs.stg.sdk.cstg200x_download_basic.fromIndex(index_1b)
-%             %
-%             %   Examples
-%             %   --------
-%             %   d2 = mcs.stg.sdk.cstg200x_download_basic.fromIndex(1);
-%             
-%             dl = mcs.stg.sdk.device_list();
-%             entry = dl.getEntry(index_1b);
-%             obj = entry.getDownloadBasicInterface();
-%         end 
-%     end
     
     methods
         function obj = cstg200x_download_basic(h)
@@ -86,11 +90,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   obj = mcs.stg.sdk.cstg200x_download_basic(h)
             
             obj = obj@mcs.stg.sdk.cstg200x_basic(h);
-
+            
         end
         function clearChannelData(obj,channel_1b)
             %x Clears data in a particular channel
-            %   
+            %
             
             %TODO: Allow clearing all as well
             
@@ -98,14 +102,14 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
         end
         function getSweepCount(obj)
-%             Get the sweep and trigger count of the STG. 
-% 
-% The triggercount tells how many times each trigger was active and is reset to zero on download of new channel data.
-% The sweepcount tells how many times each trigger was already repeated. This count is set to zero on trigger and counts up to repeat in CStg200xDownloadBasicNet::SetupTrigger. 
-% Parameters:
-% [out] sweeps on return contains the number of sweeps for each trigger  
-% [out] triggers on return contains the number of trigger events seen for each trigger  
-
+            %             Get the sweep and trigger count of the STG.
+            %
+            % The triggercount tells how many times each trigger was active and is reset to zero on download of new channel data.
+            % The sweepcount tells how many times each trigger was already repeated. This count is set to zero on trigger and counts up to repeat in CStg200xDownloadBasicNet::SetupTrigger.
+            % Parameters:
+            % [out] sweeps on return contains the number of sweeps for each trigger
+            % [out] triggers on return contains the number of trigger events seen for each trigger
+            
         end
         function setupTrigger(obj,varargin)
             %
@@ -135,7 +139,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   d.setupTrigger('channel_map',map,'syncout_map',map,'first_trigger',2)
             %
             %   % 3) Let trigger 2 start 2 & 3 together, with trigger 4
-            %   %    targeting 4. Syncouts will be updated so that 
+            %   %    targeting 4. Syncouts will be updated so that
             %   %    2 goes to 2 and 4 goes to 4
             %
             %   %Note here that the 'bitmask' class is helpful in converting
@@ -143,7 +147,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   c_map = mcs.utils.bitmask({[2 3],0,4});
             %   s_map = mcs.utils.bitmask({2,0,4});
             %   d.setupTrigger('first_trigger',2,'channel_map',c_map,'syncout_map',s_map);
-            %   
+            %
             
             ERR_ID = 'mcs:stg:sdk:cstg200x_download_basic';
             
@@ -181,7 +185,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             if isempty(in.channel_map)
                 in.channel_map = t.channel_map.value(I:I+n_max-1);
             elseif length(in.channel_map) ~= n_max
-               error(ERR_ID,'Mismatch in length between the max # of elements input and the channel_map array length') 
+                error(ERR_ID,'Mismatch in length between the max # of elements input and the channel_map array length')
             end
             
             if isempty(in.syncout_map)
@@ -198,12 +202,12 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             %--------------------------------------------------------
             first_trigger_0b = in.first_trigger-1;
-        
+            
             %This is likely not working ....
             
             obj.h.SetupTrigger(uint32(first_trigger_0b),...
                 uint32(in.channel_map),uint32(in.syncout_map),uint32(in.repeat))
-
+            
         end
         
         function trigger = getTrigger(obj)
@@ -230,51 +234,54 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %[c2,s2,r2] = obj.h.GetTrigger();
             
             %z = uint32(zeros(1,obj.n_trigger_inputs));
-
-            c2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
-            s2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
-            r2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
             
-            [c2,s2,r2] = obj.h.GetTrigger(c2,s2,r2);
+            %             c2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
+            %             s2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
+            %             r2 = NET.convertArray(zeros(1,obj.n_trigger_inputs),'System.UInt32');
+            %
+            h = obj.h;
+            
+            [c2,s2,r2] = GetTrigger(h);
             
             trigger = mcs.stg.trigger.fromSDK(uint32(c2),uint32(s2),uint32(r2),...
-                        obj.n_analog_channels,obj.n_syncout_channels);
-        end  
+                obj.n_analog_channels,obj.n_syncout_channels);
+        end
         function setChannelCapacity(obj)
-           
             
             
-%             Configures the memory layout of the current segment in
-%             download mode.
-% 
-% For each segment, the memory layout has to be defined. Each channel and
-% sync output can be given an individual amount of memory space as needed
-% by the application. Make sure the sum does not exceed the memory which is
-% assigned to the currently selected segement.
-% 
-% Parameters: 
-%   [in] channelCapacity is a list of memeory sizes, with one
-% entry per channel 
-%   [in] syncCapacity is a list of memeory sizes, with one
-% entry per syncout
-
             
-           %d.h.SetCapacity(uint32([1000 1000 1000 1000]),uint32([1000 1000 1000 1000]))
-           
-           %{
+            %             Configures the memory layout of the current segment in
+            %             download mode.
+            %
+            % For each segment, the memory layout has to be defined. Each channel and
+            % sync output can be given an individual amount of memory space as needed
+            % by the application. Make sure the sum does not exceed the memory which is
+            % assigned to the currently selected segement.
+            %
+            % Parameters:
+            %   [in] channelCapacity is a list of memeory sizes, with one
+            % entry per channel
+            %   [in] syncCapacity is a list of memeory sizes, with one
+            % entry per syncout
+            
+            
+            %d.h.SetCapacity(uint32([1000 1000 1000 1000]),uint32([1000 1000 1000 1000]))
+            
+            %{
            a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
            b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
            d.h.SetCapacity(a,b);
             %}
-
+            
         end
         function chan_capacity = getChannelCapacity(obj)
-            %This seems to not be working
-            [a,b] = obj.h.GetCapacity();
+            %
+            %   In 
+            [a,~] = obj.h.GetCapacity();
             chan_capacity = uint32(a);
         end
         function sync_capacity = getSyncCapacity(obj)
-            [a,b] = obj.h.GetCapacity();
+            [~,b] = obj.h.GetCapacity();
             sync_capacity = uint32(b);
         end
     end

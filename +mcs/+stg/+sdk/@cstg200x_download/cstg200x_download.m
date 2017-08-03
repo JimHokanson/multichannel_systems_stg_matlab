@@ -7,6 +7,10 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     %   Mcs.Usb.CStg200xDownloadNet
     
     %{
+    
+    Test Code
+    ----------
+    d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
     d.setCurrentMode();
     pt2 = 200*mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2,'n_trains',1,'output_type','current');
     
