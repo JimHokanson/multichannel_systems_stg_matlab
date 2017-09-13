@@ -10,7 +10,7 @@ The code currently has dependencies which I need to remove (see section on Depen
 ## Basic Usage
 
 Here is a basic usage example.
-```
+```matlab
 %This assumes that only one device is present or that we want the first one.
 d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
 
