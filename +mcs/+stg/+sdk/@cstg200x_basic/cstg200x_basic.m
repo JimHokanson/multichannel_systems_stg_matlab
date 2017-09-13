@@ -3,6 +3,13 @@ classdef cstg200x_basic < sl.obj.display_class
     %   Class:
     %   mcs.stg.sdk.cstg200x_basic
     %
+    %   This class cannot be instantiated directly.
+    %
+    %   Classes that can are:
+    %   mcs.stg.sdk.cstg200x_download
+    %   and
+    %   a streaming class (not yet implemented)
+    %
     %   See Also
     %   --------
     %   mcs.stg.sdk.cstg200x_download_basic
@@ -145,6 +152,11 @@ classdef cstg200x_basic < sl.obj.display_class
             %   --------------------------
             %   Start triggers 1 & 2
             %   d.startStim('triggers',1:2)
+            %
+            %   Improvements
+            %   -------------
+            %   1) By default, check that we are not stimulating already
+            %   ...
             
             %   TODO: Let's add an optional check for the program being
             %   present ...
@@ -163,7 +175,7 @@ classdef cstg200x_basic < sl.obj.display_class
             obj.h.SendStart(uint32(trigger_map.values));
         end
         function stopStim(obj,varargin)
-            %x Stop the program
+            %x Stop stimulating
             %
             %   stopStim(obj,varargin)
             %
@@ -195,6 +207,7 @@ classdef cstg200x_basic < sl.obj.display_class
             obj.h.SendStop(trigger_map.values);
         end
         function setCurrentMode(obj,channels_1b)
+            %x Enable current-controlled stimulation on a set of channels
             %
             %   setCurrentMode(obj, *channels_1b)
             
@@ -210,6 +223,10 @@ classdef cstg200x_basic < sl.obj.display_class
             
         end
         function setVoltageMode(obj,channels_1b)
+            %x Enable current-controlled stimulation on a set of channels
+            %
+            %   
+            
             if nargin == 1
                 obj.h.SetVoltageMode();
                 obj.channel_modes(:) = {'v'};

@@ -118,6 +118,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %
             %   Optional Inputs
             %   ---------------
+            %   linearize : default false
+            %       If true, all triggers and sync-outs are mapped to
+            %       individual channels.
             %   first_trigger : default 1  CURRENTLY NOT WORKING, BUG IN DLL
             %       If this is not 1, it allows updating starting
             %       at a different trigger index.
@@ -125,6 +128,8 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   syncout_maps : [1 x n_triggers (max)]
             %   repeats : [1 x n_triggers (max)]
             %       # of times to repeat the stimulus. 0 means forever.
+            %   in.repeat_all : default []
+            %       This value gets applied to all triggers.
             %
             %   Examples (Note 'd' is instance of the object)
             %   -----------------------------------------------
@@ -148,25 +153,41 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   c_map = mcs.utils.bitmask({[2 3],0,4});
             %   s_map = mcs.utils.bitmask({2,0,4});
             %   d.setupTrigger('first_trigger',2,'channel_maps',c_map,'syncout_maps',s_map);
+            %   %DOESN'T WORK, first_trigger is broken :/
             %
-            %
-            %   Improvement
+            %   Improvements
             %   ------------
-            %   1) Allow passing in the trigger (or perhaps better yet
-            %   allow the trigger to update based on set methods)
+            %   1) Can we have overlapping trigger to channel maps?
+            %    Presumably this should be ok, we just can't trigger
+            %    both triggers at the same time ...
+            
             
             ERR_ID = 'mcs:stg:sdk:cstg200x_download_basic';
             
+            in.linearize = false;
             in.first_trigger = 1;
             in.channel_maps = [];
             in.syncout_maps = [];
             in.repeats = [];
+            in.repeat_all = false;
             in = mcs.sl.in.processVarargin(in,varargin);
             
             %The default trigger settings
             t = obj.getTrigger();
             
             I = in.first_trigger;
+            
+            n_triggers = t.n_triggers; %#ok<PROPLC>
+            
+            if in.linearize
+                map = mcs.utils.bitmask(num2cell(1:n_triggers)); %#ok<PROPLC>
+                in.channel_maps = map;
+                in.syncout_maps = map;
+            end
+            
+            if ~isempty(in.repeat_all)
+               in.repeats = in.repeat_all*ones(1,n_triggers); %#ok<PROPLC> 
+            end
             
             %Bitmask to array conversions
             %----------------------------------------
@@ -259,6 +280,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
                 b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
                 d.h.SetCapacity(a,b);
             %}
+            
+        end
+        function setSyncCapacity(obj)
             
         end
         function chan_capacity = getChannelCapacity(obj)

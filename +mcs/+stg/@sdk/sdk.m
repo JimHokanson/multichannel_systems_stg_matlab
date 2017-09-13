@@ -35,6 +35,9 @@ classdef sdk < handle
         function obj = sdk()
             %
             %   obj = mcs.stg.sdk()
+            %
+            %   Run via: 
+            %   mcs.stg.sdk.load()
             
             %Note, the _v20 in the dll name means using .NET 2.0 framework, 
             %versus the the normal file which uses 4

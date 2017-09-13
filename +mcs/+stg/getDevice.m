@@ -14,7 +14,7 @@ function device = getDevice()
 %   - other options
 %
 %   Output options
-%   - output type (download, streaming, basic)
+%   - output type (download, streaming)
 
 device = mcs.stg.sdk.cstg200x_download.fromIndex(1);
 

@@ -21,6 +21,8 @@ classdef pulse_train < matlab.mixin.Copyable
         stop_times
         total_duration_s
         
+        user_summary %This is optional and can be used to keep a 
+        %user-defined summary along with the pulse train.
     end
     
     methods (Static)
