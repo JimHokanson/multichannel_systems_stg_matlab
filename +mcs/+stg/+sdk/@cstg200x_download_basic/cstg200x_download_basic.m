@@ -251,12 +251,17 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         end
         function setChannelCapacity(obj)
             
+            a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
+            b = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
+            obj.h.SetCapacity(a,b);
+            
+            %keyboard
             %The GetCapacity is broken, so we'll wait on this until
             %that is fixed.
             %
             %Segment support?
             
-            error('Not yet implemented')
+            %error('Not yet implemented')
             
             %             Configures the memory layout of the current segment in
             %             download mode.
