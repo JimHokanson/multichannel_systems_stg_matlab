@@ -98,13 +98,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %        - 'append'
            %    mirror_to_sync : (default false)
            %        TODO
-           %    sync_mode:
-           %        - start
-           %        - first_pulse
-           %        - all_pulses
-           %        - first_and_last_pulses - this could be tricky to
-           %        define
-           %        - start_and_end
+           %    sync_mode: NYI (default 'all_pulses')
+           %        - 'start'
+           %        - 'first_pulse'
+           %        - 'all_pulses'
+           %        - 'first_and_last_pulses' - this could be tricky to define
+           %        - 'start_and_end'
+           %    sync_pattern: NYI
            %
            %    TODO: The sync generation should be its own functionality.
            %
@@ -126,10 +126,14 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            in.mode = 'new';  
            in.mirror_to_sync = false;
+           in.sync_mode = 'all_pulses'
+           in.verify_capacity = true;
            in = sl.in.processVarargin(in,varargin);
            [a,d] = data.getStimValues();
            %a - amplitude
            %d - durations
+           
+           %TODO: Verify memory capacity
            
            %TODO: Allow specifying sync as well
            

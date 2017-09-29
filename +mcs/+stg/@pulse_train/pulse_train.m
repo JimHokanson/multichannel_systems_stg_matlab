@@ -11,6 +11,19 @@ classdef pulse_train < matlab.mixin.Copyable
     %   See Also
     %   --------
     %   mcs.stg.waveform
+    %
+    %   Examples
+    %   -----------------------------
+    %   pt = 500*mcs.stg.pulse_train.fixed_rate(40);
+    %
+    %   %This is not yet fully implemented
+    %   pt = mcs.stg.pulse_train.fromTimes(times,varargin)
+    
+    %{
+    
+    
+    
+    %}
         
     properties
         output_type  %'voltage' or 'current'
@@ -24,12 +37,14 @@ classdef pulse_train < matlab.mixin.Copyable
         user_summary %This is optional and can be used to keep a 
         %user-defined summary along with the pulse train.
     end
-    
+        
     methods (Static)
         function obj = fromTimes(times,varargin)
             %
-            %
+            %   pt = mcs.stg.pulse_train.fromTimes(times,varargin)
             %   
+            
+            error('Not yet implemented')
             
             in.amp_units = 'uA';
             in.waveform = []; %mcs.stg.waveform

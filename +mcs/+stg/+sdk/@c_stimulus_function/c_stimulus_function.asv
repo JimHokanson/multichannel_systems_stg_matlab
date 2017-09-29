@@ -8,8 +8,7 @@ classdef c_stimulus_function
     %   mcs.stg.sdk.cstg200x_download_basic
     %
     %   This is mainly duplicated elsewhere. It was recommended to me
-    %   by MCS since it exposes a prepare function which explicitly states
-    %   how much memory is needed.
+    %   by MCS sinc
     
     
     %{
