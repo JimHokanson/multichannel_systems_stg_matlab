@@ -57,8 +57,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     properties (Dependent)
         trigger_settings   %mcs.stg.trigger
         
-        channel_capacity_current_segment  %Currently broken
+        channel_capacity_current_segment  %
         %Should be the # of bytes available per channel
+        %
+        %This was broken at some point and required a firmware update to
+        %1.48 (for the STG 4004)
         
         sync_capacity_current_segment
         

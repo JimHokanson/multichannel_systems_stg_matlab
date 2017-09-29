@@ -18,6 +18,8 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     %   See Also
     %   --------
     %   mcs.stg.sdk
+    %   mcs.stg.sdk.cstg200x_download_basic
+    %   mcs.stg.sdk.cstg200x_basic
     
     %{
     
