@@ -67,6 +67,8 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         
         n_sweeps
         n_triggers
+        
+        stimulus
     end
     
     methods
@@ -84,6 +86,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         end
         function value = get.n_triggers(obj)
             
+        end
+        function value = get.stimulus(obj)
+           value = obj.h.Stimulus; 
         end
     end
     
