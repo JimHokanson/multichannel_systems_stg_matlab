@@ -59,6 +59,16 @@ classdef c_stimulus_function
             end
             value = obj.h.PrepareData(a,d,type);
         end
+        function value = prepareSyncData(obj,data)
+            [a,d] = data.getStimValues();
+            a(a ~= 0) = 1;
+            type = mcs.enum.stg_destination.sync;
+            value = obj.h.PrepareData(a,d,type);
+        end
+        function clearSyncData(obj)
+            %TODO: I'm not sure how to call this since no documentation
+            %exists
+        end
     end
     
 end
