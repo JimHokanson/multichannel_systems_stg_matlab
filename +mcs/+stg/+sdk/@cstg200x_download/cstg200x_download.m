@@ -124,6 +124,8 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    prepareAndSendData
            %    PrepareAndAppendData 
            
+           SET_MEM = true;
+           
            in.mode = 'new';  
            in.mirror_to_sync = false;
            in.sync_mode = 'all_pulses';
@@ -137,9 +139,16 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            c_stim = obj.stimulus;
                       
-           wtf1 = c_stim.prepareData(data);
            
-           obj.setChannelCapacity(wtf1.DeviceDataLength,'start_chan',channel_1b);
+           
+           if SET_MEM
+               wtf1 = c_stim.prepareData(data);
+               obj.setChannelCapacity(wtf1.DeviceDataLength,'start_chan',channel_1b);
+               if in.mirror_to_sync
+                  wtf2 = c_stim.prepareSyncData(data);
+                  obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
+               end
+           end
            
            %TODO: Allow specifying sync as well
            
@@ -165,6 +174,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                    error('Unrecognized mode')
            end
            
+          
            %Execute command - append or new
            fh(channel_0b, a, d, type);
            
@@ -184,8 +194,11 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                 % - "  " current, 15 us for continuous mode
                 % - "  " current, 50 us if not continuous mode
               a(a ~= 0) = 1;
-              wtf2 = c_stim.prepareSyncData(data);
-              obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
+%               wtf2 = c_stim.prepareSyncData(data);
+%               if SET_MEM
+%                  %obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
+%                  obj.setSyncCapacity(14);
+%               end
 
               
 

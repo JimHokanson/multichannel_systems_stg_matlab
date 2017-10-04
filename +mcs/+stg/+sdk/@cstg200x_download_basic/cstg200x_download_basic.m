@@ -264,6 +264,8 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         end
         function setChannelCapacity(obj,capacity,varargin)
             %
+            %   WARNING - this currently clears both channel and sync memory
+            %
             %   TODO: Document function usage ...
             %
             %             Configures the memory layout of the current segment in
@@ -283,11 +285,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   Segment support???
             %   
             
+            %TODO: Max memory support?
+            
             in.all = false;
             in.start_chan = 1;
             in = sl.in.processVarargin(in,varargin);
-            
-            %The rest of this is not yet implemented
             
             a = uint32(obj.getChannelCapacity());
             b = uint32(obj.getSyncCapacity());
@@ -303,7 +305,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             obj.h.SetCapacity(a,b);
         end
         function setSyncCapacity(obj,capacity,varargin)
-            in.all = false;
+            %
+            %   WARNING - this currently clears both data and sync memory
+            in.all = true;
             in.start_chan = 1;
             in = sl.in.processVarargin(in,varargin);
             
@@ -312,7 +316,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             a = uint32(obj.getChannelCapacity());
             b = uint32(obj.getSyncCapacity());
             
-            if in.all
+            if in.all && length(capacity) == 1
                 b(:) = capacity;
             else
                 end_chan = in.start_chan + length(capacity) - 1;
