@@ -235,7 +235,6 @@ classdef cstg200x_basic < sl.obj.display_class
                 obj.h.SetVoltageMode(channels_1b - 1);
             end
         end
-        
     end
     
 end

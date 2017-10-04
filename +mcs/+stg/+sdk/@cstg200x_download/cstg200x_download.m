@@ -98,13 +98,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %        - 'append'
            %    mirror_to_sync : (default false)
            %        TODO
-           %    sync_mode:
-           %        - start
-           %        - first_pulse
-           %        - all_pulses
-           %        - first_and_last_pulses - this could be tricky to
-           %        define
-           %        - start_and_end
+           %    sync_mode: NYI (default 'all_pulses')
+           %        - 'start'
+           %        - 'first_pulse'
+           %        - 'all_pulses'
+           %        - 'first_and_last_pulses' - this could be tricky to define
+           %        - 'start_and_end'
+           %    sync_pattern: NYI
            %
            %    TODO: The sync generation should be its own functionality.
            %
@@ -126,10 +126,20 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            in.mode = 'new';  
            in.mirror_to_sync = false;
+           in.sync_mode = 'all_pulses';
+           in.verify_capacity = true;
            in = sl.in.processVarargin(in,varargin);
            [a,d] = data.getStimValues();
            %a - amplitude
            %d - durations
+           
+           %TODO: Verify memory capacity
+           
+           c_stim = obj.stimulus;
+                      
+           wtf1 = c_stim.prepareData(data);
+           
+           obj.setChannelCapacity(wtf1.DeviceDataLength,'start_chan',channel_1b);
            
            %TODO: Allow specifying sync as well
            
@@ -147,6 +157,9 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                    fh = @(a,b,c,d)obj.h.PrepareAndAppendData(a,b,c,d);
                case 'new'
                    %TODO: Ask about this ...
+                   %JAH: I had to provide inputs because 
+                   %I couldn't bind to the function otherwise
+                   %e.g. fh = @obj.h.PrepareAndSendData;
                    fh = @(a,b,c,d)obj.h.PrepareAndSendData(a,b,c,d);
                otherwise
                    error('Unrecognized mode')
@@ -157,10 +170,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            if in.mirror_to_sync
               %TODO: Support manipulation of sync (if necessary)
-              
-              
-              
-              
+
               type = mcs.enum.stg_destination.sync;
 
               %It appears that the only valid values are 0 and 1
@@ -173,13 +183,10 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
               %This is documented somewhere in the manual
                 % - "  " current, 15 us for continuous mode
                 % - "  " current, 50 us if not continuous mode
-              
-                
-                
-%               a = abs(a);
-%               a(a > 1) = 1;
-              
               a(a ~= 0) = 1;
+              wtf2 = c_stim.prepareSyncData(data);
+              obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
+
               
 
               fh(channel_0b, a, d, type);
@@ -187,6 +194,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                %TODO: If not mirrored, if we've previously mirrored to sync
                %the sync data will still be present in memory so the "new"
                %option isn't really "new"
+               %c_stim.ClearSyncData
            end
            
            

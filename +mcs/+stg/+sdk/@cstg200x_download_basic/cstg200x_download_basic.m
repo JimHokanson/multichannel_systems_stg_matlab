@@ -88,7 +88,8 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
         end
         function value = get.stimulus(obj)
-           value = obj.h.Stimulus; 
+           h = obj.h.Stimulus;
+           value = mcs.stg.sdk.c_stimulus_function(h);
         end
     end
     
@@ -112,11 +113,16 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         function getSweepCount(obj)
             %             Get the sweep and trigger count of the STG.
             %
-            % The triggercount tells how many times each trigger was active and is reset to zero on download of new channel data.
-            % The sweepcount tells how many times each trigger was already repeated. This count is set to zero on trigger and counts up to repeat in CStg200xDownloadBasicNet::SetupTrigger.
-            % Parameters:
-            % [out] sweeps on return contains the number of sweeps for each trigger
-            % [out] triggers on return contains the number of trigger events seen for each trigger
+            % The triggercount tells how many times each trigger was active
+            % and is reset to zero on download of new channel data. The
+            % sweepcount tells how many times each trigger was already
+            % repeated. This count is set to zero on trigger and counts up
+            % to repeat in CStg200xDownloadBasicNet::SetupTrigger.
+            % 
+            %   Parameters:
+            % [out] sweeps on return contains the number of sweeps for each
+            % trigger [out] triggers on return contains the number of
+            % trigger events seen for each trigger
             
         end
         function setupTrigger(obj,varargin)
@@ -242,7 +248,6 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             obj.h.SetupTrigger(uint32(first_trigger_0b),...
                 uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats))
         end
-        
         function trigger = getTrigger(obj)
             %x Retrieves the trigger setup info
             %
@@ -257,20 +262,10 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
                 obj.n_analog_channels,obj.n_syncout_channels);
         end
-        function setChannelCapacity(obj)
-            
-            a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-            b = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-            obj.h.SetCapacity(a,b);
-            
-            %keyboard
-            %The GetCapacity is broken, so we'll wait on this until
-            %that is fixed.
+        function setChannelCapacity(obj,capacity,varargin)
             %
-            %Segment support?
-            
-            %error('Not yet implemented')
-            
+            %   TODO: Document function usage ...
+            %
             %             Configures the memory layout of the current segment in
             %             download mode.
             %
@@ -284,19 +279,48 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             % entry per channel
             %   [in] syncCapacity is a list of memeory sizes, with one
             % entry per syncout
+            %
+            %   Segment support???
+            %   
             
+            in.all = false;
+            in.start_chan = 1;
+            in = sl.in.processVarargin(in,varargin);
             
-            %d.h.SetCapacity(uint32([1000 1000 1000 1000]),uint32([1000 1000 1000 1000]))
+            %The rest of this is not yet implemented
             
-            %{
-                a = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-                b  = NET.convertArray(10000*ones(1,4,'uint32'), 'System.UInt32');
-                d.h.SetCapacity(a,b);
-            %}
+            a = uint32(obj.getChannelCapacity());
+            b = uint32(obj.getSyncCapacity());
             
+            if in.all
+                a(:) = capacity;
+            else
+                end_chan = in.start_chan + length(capacity) - 1;
+                %TODO: error check on length
+                a(in.start_chan:end_chan) = capacity;
+            end
+            
+            obj.h.SetCapacity(a,b);
         end
-        function setSyncCapacity(obj)
+        function setSyncCapacity(obj,capacity,varargin)
+            in.all = false;
+            in.start_chan = 1;
+            in = sl.in.processVarargin(in,varargin);
             
+            %The rest of this is not yet implemented
+            
+            a = uint32(obj.getChannelCapacity());
+            b = uint32(obj.getSyncCapacity());
+            
+            if in.all
+                b(:) = capacity;
+            else
+                end_chan = in.start_chan + length(capacity) - 1;
+                %TODO: error check on length
+                b(in.start_chan:end_chan) = capacity;
+            end
+            
+            obj.h.SetCapacity(a,b);
         end
         function chan_capacity = getChannelCapacity(obj)
             %x Retrieve the # of bytes that each channel can store
