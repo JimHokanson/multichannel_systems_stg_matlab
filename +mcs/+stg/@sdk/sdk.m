@@ -3,23 +3,38 @@ classdef sdk < handle
     %   Class:
     %   mcs.stg.sdk
     %
-    %   Source of Stimulator DLL:
+    %   Source of Stimulator DLL & Documentation:
     %   http://www.multichannelsystems.com/software/mcsusbnetdll
     %
-    %   Stimulator software:
+    %   Stimulator Software GUI from MCS:
     %   http://www.multichannelsystems.com/software/mc-stimulus-ii
     %
     %   Forum:
-    %   http://multichannelsystems.forumieren.de/
+    %   http://multichannelsystems.forumieren.de
     %
+    %   Usage
+    %   -----
+    %   Generally this class is not called directly.
     %
+    %   See Also
+    %   --------
+    %   mcs.stg.getDevice
+    %
+    
+    %{
+        temp = mcs.stg.sdk.load();
+    %}
     
     properties (Constant)
         DRIVER_VERSION = '3_2_71'
     end
     
+    properties
+        dll
+    end
+    
     methods (Static)
-        function load()
+        function varargout = load()
             %
             %   mcs.stg.sdk.load()
             
@@ -27,6 +42,10 @@ classdef sdk < handle
             
             if isempty(obj)
                obj = mcs.stg.sdk; 
+            end
+            
+            if nargout
+               varargout{1} = obj; 
             end
         end
     end
@@ -45,7 +64,7 @@ classdef sdk < handle
             %TODO: Move into local package
             p = sl.stack.getMyBasePath;
             
-            dll = NET.addAssembly(fullfile(p,obj.DRIVER_VERSION,'McsUsbNet.dll'));
+            obj.dll = NET.addAssembly(fullfile(p,obj.DRIVER_VERSION,'McsUsbNet.dll'));
             
         end
     end
