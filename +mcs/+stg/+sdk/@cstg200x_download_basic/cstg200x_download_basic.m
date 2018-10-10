@@ -272,6 +272,19 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %
             %   setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
             %
+            %   TODO: Finish documentation
+            %
+            %   Important Usage Note
+            %   This should be done first before writing anything to memory
+            %   as I think it rewrites everything.
+            %
+            %   i.e. don't set chan 1, then upload to 1, then set memory
+            %   for channel 2, since this may break channel 1s data (maybe)
+            %
+            %   Optional Inputs
+            %   ---------------
+            %   
+            %
             
             in.all = false;
             in.start_chan = 1;
