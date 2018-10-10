@@ -99,7 +99,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    mirror_to_sync : (default false)
            %        TODO
            %    sync_mode: NYI (default 'all_pulses')
-           %        - 'start'
+           %        - 'start' - sync pulse corresponding to t = 0
            %        - 'first_pulse'
            %        - 'all_pulses'
            %        - 'first_and_last_pulses' - this could be tricky to define

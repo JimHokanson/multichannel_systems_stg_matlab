@@ -69,6 +69,8 @@ classdef waveform < handle
             %   %1 uA, 0.1 ms duration
             %   w = mcs.stg.waveform.biphasic(1,0.1)
             %
+            %   %+/- 1 mA, 100 us duration each
+            %
             %   Improvements
             %   ------------
             %   1) Allow ratio/duration scaling

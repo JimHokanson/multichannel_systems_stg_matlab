@@ -4,8 +4,7 @@ Multi-Channel Systems (MCS) provides software that allows for communication with
 
 ## Status
 
-The code currently has dependencies which I need to remove (see section on Dependencies). Many functions are not yet implemented, although most are relatively trivial to implement ...
-
+The code currently has dependencies which I need to remove (see section on Dependencies). Many functions exposed by the driver are not yet implemented in Matlab, although most are relatively trivial to implement.
 
 ## Basic Usage
 

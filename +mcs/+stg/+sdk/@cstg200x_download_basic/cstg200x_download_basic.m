@@ -6,6 +6,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     %   Wraps:
     %   Mcs.Usb.CStg200xDownloadBasicNet (An abtract class)
     %
+    %   This class is not-instatianted directly. Instead reference
+    %   cstg200x_download
+    %
     %   See Also
     %   --------
     %   mcs.stg.sdk.cstg200x_basic
@@ -51,7 +54,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     
     
     properties
-        d2 = '-------- mcs.stg.sdk.cstg200x_download_basic -------' 
+        d2 = '-------- mcs.stg.sdk.cstg200x_download_basic -------'
     end
     
     properties (Dependent)
@@ -88,8 +91,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
         end
         function value = get.stimulus(obj)
-           h = obj.h.Stimulus;
-           value = mcs.stg.sdk.c_stimulus_function(h);
+            %????
+            %????
+            %   What is this????
+            h = obj.h.Stimulus;
+            value = mcs.stg.sdk.c_stimulus_function(h);
         end
     end
     
@@ -118,7 +124,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             % sweepcount tells how many times each trigger was already
             % repeated. This count is set to zero on trigger and counts up
             % to repeat in CStg200xDownloadBasicNet::SetupTrigger.
-            % 
+            %
             %   Parameters:
             % [out] sweeps on return contains the number of sweeps for each
             % trigger [out] triggers on return contains the number of
@@ -200,7 +206,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             end
             
             if ~isempty(in.repeat_all)
-               in.repeats = in.repeat_all*ones(1,n_triggers); %#ok<PROPLC> 
+                in.repeats = in.repeat_all*ones(1,n_triggers); %#ok<PROPLC>
             end
             
             %Bitmask to array conversions
@@ -218,7 +224,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             n_max = max([length(in.channel_maps),length(in.syncout_maps),length(in.repeats)]);
             if n_max == 0
                 error(ERR_ID,'Incorrect usage of function, all aray inputs empty')
-            %elseif n_max > length
+                %elseif n_max > length
             end
             
             %TODO: Check that n_max doesn't exceed the # of triggers
@@ -254,13 +260,37 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   Outputs
             %   -------
             %   trigger : mcs.stg.trigger
-
+            
             h = obj.h;
             
             [c2,s2,r2] = GetTrigger(h);
             
             trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
                 obj.n_analog_channels,obj.n_syncout_channels);
+        end
+        function setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
+            %
+            %   setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
+            %
+            
+            in.all = false;
+            in.start_chan = 1;
+            in = sl.in.processVarargin(in,varargin);
+            
+            a = uint32(obj.getChannelCapacity());
+            b = uint32(obj.getSyncCapacity());
+            
+            if in.all
+                a(:) = chan_cap;
+                b(:) = sync_cap;
+            else
+                end_chan = in.start_chan + length(capacity) - 1;
+                %TODO: error check on length
+                a(in.start_chan:end_chan) = chan_cap;
+                b(in.start_chan:end_chan) = sync_cap;
+            end
+            
+            obj.h.SetCapacity(a,b);
         end
         function setChannelCapacity(obj,capacity,varargin)
             %
@@ -283,7 +313,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             % entry per syncout
             %
             %   Segment support???
-            %   
+            %
             
             %TODO: Max memory support?
             
@@ -328,7 +358,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         end
         function chan_capacity = getChannelCapacity(obj)
             %x Retrieve the # of bytes that each channel can store
-            %   In 
+            %   In
             [a,~] = obj.h.GetCapacity();
             chan_capacity = uint32(a);
         end
