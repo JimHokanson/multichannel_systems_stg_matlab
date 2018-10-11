@@ -62,7 +62,7 @@ classdef sdk < handle
             %versus the the normal file which uses 4
             
             %TODO: Move into local package
-            p = sl.stack.getMyBasePath;
+            p = mcs.sl.stack.getMyBasePath;
             
             obj.dll = NET.addAssembly(fullfile(p,obj.DRIVER_VERSION,'McsUsbNet.dll'));
             

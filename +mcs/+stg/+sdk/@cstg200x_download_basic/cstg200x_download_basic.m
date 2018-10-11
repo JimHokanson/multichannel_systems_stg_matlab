@@ -300,7 +300,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             in.all = false;
             in.start_chan = 1;
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             %TODO: If we knew the # of channels we could avoid
             %these calls if we specify all channels as inputs
@@ -346,7 +346,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             in.all = false;
             in.start_chan = 1;
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             a = uint32(obj.getChannelCapacity());
             b = uint32(obj.getSyncCapacity());
@@ -366,7 +366,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   WARNING - this currently clears both data and sync memory
             in.all = true;
             in.start_chan = 1;
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             %The rest of this is not yet implemented
             
