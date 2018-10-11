@@ -37,31 +37,63 @@ classdef c_stimulus_function
         end
         function value = prepareData(obj,data)
             %
+            %   value = prepareData(obj,data)
             %
+            %   Inputs
+            %   ------
+            %   data : struct or object
+            %       struct with fields a,d or function [a,d] = data.getStimValues();
             %
+            %       TODO: Update documentation, needs type support ...
+            %   
             %   Output
             %   ------
             %   value : Mcs.Usb.StimulusDeviceDataAndUnrolledData (.NET)
-            %     .UnrolledDuration: [1×1 System.UInt64[]]
-            %     .UnrolledSync: [1×1 System.UInt32[]]
-            %     .UnrolledAmplitude: [1×1 System.Int32[]]
-            %     .DeviceDataLength: 14
-           %      .DeviceData: [1×1 System.Byte[]]
+            %       Note I don't wrap the structure, it is just the raw
+            %       output from the function call.
+            %       Example:
+            %           .UnrolledDuration: [1×1 System.UInt64[]]
+            %           .UnrolledSync: [1×1 System.UInt32[]]
+            %           .UnrolledAmplitude: [1×1 System.Int32[]]
+            %           .DeviceDataLength: 14
+            %           .DeviceData: [1×1 System.Byte[]]
+            %
+            %       
+            %
+            %   See Also
+            %   --------
+            %   prepareSyncData
+            %   mcs.stg.sdk.cstg200x_download.sentDataToDevice
             
             %var preparedData = device.Stimulus.PrepareData(amplitude, duration,    STG_DestinationEnumNet.channeldata_voltage);
             %int lengthInBytes = preparedData.DeviceDataLength;
             
-            [a,d] = data.getStimValues();
-            if strcmp(data.output_type,'voltage')
-               type = mcs.enum.stg_destination.voltage;
+
+            if isstruct(data)
+                a = data.a;
+                d = data.d;
+                type = data.type;
             else
-               type = mcs.enum.stg_destination.current;
+                [a,d] = data.getStimValues();
+            	if strcmp(data.output_type,'voltage')
+                   type = mcs.enum.stg_destination.voltage;
+                else
+                   type = mcs.enum.stg_destination.current;
+                end
             end
+
             value = obj.h.PrepareData(a,d,type);
         end
         function value = prepareSyncData(obj,data)
-            [a,d] = data.getStimValues();
-            a(a ~= 0) = 1;
+            %
+            %   TODO: Update documentation, very similar to prepareData
+            if isstruct(data)
+                a = data.s; %Note we use s here for sync
+                d = data.d;
+            else
+                [a,d] = data.getStimValues();
+                a(a ~= 0) = 1;
+            end
             type = mcs.enum.stg_destination.sync;
             value = obj.h.PrepareData(a,d,type);
         end

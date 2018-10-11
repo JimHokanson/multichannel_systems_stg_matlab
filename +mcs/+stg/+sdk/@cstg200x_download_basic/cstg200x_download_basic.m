@@ -280,7 +280,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
                 obj.n_analog_channels,obj.n_syncout_channels);
         end
-        function setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
+        function setChannelAndSyncCapacity(obj,chan_cap,sync_cap,varargin)
             %
             %   setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
             %
@@ -302,6 +302,8 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             in.start_chan = 1;
             in = sl.in.processVarargin(in,varargin);
             
+            %TODO: If we knew the # of channels we could avoid
+            %these calls if we specify all channels as inputs
             a = uint32(obj.getChannelCapacity());
             b = uint32(obj.getSyncCapacity());
             
@@ -309,7 +311,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
                 a(:) = chan_cap;
                 b(:) = sync_cap;
             else
-                end_chan = in.start_chan + length(capacity) - 1;
+                end_chan = in.start_chan + length(chan_cap) - 1;
                 %TODO: error check on length
                 a(in.start_chan:end_chan) = chan_cap;
                 b(in.start_chan:end_chan) = sync_cap;
@@ -380,6 +382,11 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             end
             
             obj.h.SetCapacity(a,b);
+        end
+        function [chan_capacity,sync_capacity] = getChannelAndSyncCapacity(obj)
+            [a,b] = obj.h.GetCapacity();
+            chan_capacity = uint32(a);
+            sync_capacity = uint32(b);
         end
         function chan_capacity = getChannelCapacity(obj)
             %x Retrieve the # of bytes that each channel can store

@@ -21,6 +21,11 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     %   mcs.stg.sdk.cstg200x_download_basic
     %   mcs.stg.sdk.cstg200x_basic
     
+    %Functions List
+    %-----------------
+    %mcs.stg.sdk.cstg200x_download_basic.setupTrigger
+    %mcs.stg.sdk.cstg200x_basic.startStim
+    
     %{
     
     Test Code
@@ -90,9 +95,10 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    Inputs
            %    ------
            %    channel_1b : 
-           %        Which channel to send the data to ...
+           %        Which channel or channels to send the data to
            %    data : mcs.stg.pulse_train OR ...
            %        Currently only a pulse train input is supported.
+           %        For multiple channels a cell array should be used.
            %
            %    Optional Inputs
            %    ---------------
@@ -103,7 +109,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    mode : string
            %        - 'new' (default)
            %        - 'append' NYI - requires complicated memory management
-           %    mirror_to_sync : (default false)
+           %    use_sync : (default false)
            %        If true, sync_mode is applied to generate a sync
            %        pattern to play.
            %    sync_mode: NYI (default 'all_pulses')
@@ -129,6 +135,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %
            %    Sync can only be 0 or 1
            %
+           %
+           %    Examples
+           %    --------
+           %
+           %
+           %
+           %
            %    See Also
            %    ---------
            %    
@@ -145,95 +158,103 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            in.set_mem = true;
            in.mode = 'new';  
-           in.mirror_to_sync = false;
+           in.use_sync = true;
            in.sync_mode = 'all_pulses';
            in.verify_capacity = true;
            in = sl.in.processVarargin(in,varargin);
-           [a,d] = data.getStimValues();
+           
            %a - amplitude
            %d - durations
            
            %TODO: Verify memory capacity
            
+           %Needed for getting memory requirements for stim
+           %c_stim : mcs.stg.sdk.c_stimulus_function
            c_stim = obj.stimulus;
-                      
            
+           n_channels = length(channel_1b);
+           if ~iscell(data)
+               data = {data};
+           end
            
-           if SET_MEM
-               wtf1 = c_stim.prepareData(data);
-               obj.setChannelCapacity(wtf1.DeviceDataLength,'start_chan',channel_1b);
-               if in.mirror_to_sync
-                  %I think this call is unecessary, because I think
-                  %only the length is needed, which is the same as 1
-                  %for now ...
-                  wtf2 = c_stim.prepareSyncData(data);
-                  obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
+           if length(data) == 1 && n_channels > 1
+               temp = cell(1,n_channels);
+               temp(:) = data{1};
+               data = temp;
+           end
+           
+           %Setup of raw outputs for hardware
+           %----------------------------------------
+           raw_data = struct('id',num2cell(channel_1b),'a',[],'d',[],'type','','s',[]);
+           for i = 1:n_channels
+               cur_data = data{i};
+               [a,d] = cur_data.getStimValues();
+               
+               raw_data(i).a = a;
+               raw_data(i).d = d;
+               
+               if strcmp(cur_data.output_type,'voltage')
+                   type = mcs.enum.stg_destination.voltage;
+               else
+                   type = mcs.enum.stg_destination.current;
+               end
+               
+               raw_data(i).type = type;
+               
+               if in.use_sync
+                   %This could change depending on how we process sync ...
+                   a(a ~= 0) = 1;
+                   raw_data(i).s = a;
                end
            end
            
-           %TODO: Allow specifying sync as well
-           
-
-           if strcmp(data.output_type,'voltage')
-              type = mcs.enum.stg_destination.voltage;
+           %Memory setup 
+           %------------------------------------------
+           if in.set_mem
+               [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
+               for i = 1:n_channels
+                   cur_chan = channel_1b(i);
+                   wtf1 = c_stim.prepareData(raw_data(i));
+                   len = wtf1.DeviceDataLength;
+                   chan_capacity(cur_chan) = len;
+                   if in.use_sync
+                       wtf1 = c_stim.prepareSyncData(raw_data(i));
+                       len = wtf1.DeviceDataLength;
+                       sync_capacity(cur_chan) = len;
+                   end
+               end
+               obj.setChannelAndSyncCapacity(chan_capacity,sync_capacity);
            else
-              type = mcs.enum.stg_destination.current;
-           end
-
-           channel_0b = uint32(channel_1b-1);
-           
-           switch in.mode
-               case 'append'
-                   fh = @(a,b,c,d)obj.h.PrepareAndAppendData(a,b,c,d);
-               case 'new'
-                   %TODO: Ask about this ...
-                   %JAH: I had to provide inputs because 
-                   %I couldn't bind to the function otherwise
-                   %e.g. fh = @obj.h.PrepareAndSendData;
-                   fh = @(a,b,c,d)obj.h.PrepareAndSendData(a,b,c,d);
-               otherwise
-                   error('Unrecognized mode')
+              error('Not yet implemented') 
            end
            
-          
-           %Execute command - append or new
-           fh(channel_0b, a, d, type);
-           
-           if in.mirror_to_sync
-              %TODO: Support manipulation of sync (if necessary)
 
-              type = mcs.enum.stg_destination.sync;
-
-              %It appears that the only valid values are 0 and 1
-              %
-              %other values will cause the sync to dissapear
-              %
-              %Also, there is a slight shift (20 us?) betwen the sync
-              %pulse and the stim output (seen in voltage & current mode)
-              %
-              %This is documented somewhere in the manual
-                % - "  " current, 15 us for continuous mode
-                % - "  " current, 50 us if not continuous mode
-              a(a ~= 0) = 1;
-%               wtf2 = c_stim.prepareSyncData(data);
-%               if SET_MEM
-%                  %obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
-%                  obj.setSyncCapacity(14);
-%               end
-
-              
-
-              fh(channel_0b, a, d, type);
-           else
-               %TODO: If not mirrored, if we've previously mirrored to sync
-               %the sync data will still be present in memory so the "new"
-               %option isn't really "new"
-               %c_stim.ClearSyncData
+           %Upload stim to memory
+           %---------------------------------
+           sync_type = mcs.enum.stg_destination.sync;
+           for i = 1:n_channels
+               channel_0b = uint32(channel_1b(i)-1);
+               r = raw_data(i);
+               switch in.mode
+                   case 'append'
+                       obj.h.PrepareAndAppendData(channel_0b,r.a,r.d,r.type);
+                       if in.use_sync
+                          obj.h.PrepareAndAppendData(channel_0b,r.s,r.d,sync_type); 
+                       end
+                   case 'new'
+                       obj.h.PrepareAndSendData(channel_0b,r.a,r.d,r.type);
+                       if in.use_sync
+                          obj.h.PrepareAndSendData(channel_0b,r.s,r.d,sync_type);
+                       end
+                   otherwise
+                       error('Unrecognized mode')
+               end
+               if ~in.use_sync
+                  %TODO: Need to make sure we clear sync memory ... 
+               end
            end
-           
-           
-           
-            
+
+ 
         end
     end
 end
