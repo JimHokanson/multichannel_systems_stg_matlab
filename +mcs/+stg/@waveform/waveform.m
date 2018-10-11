@@ -41,6 +41,52 @@ classdef waveform < handle
     end
     
     methods (Static)
+        function obj = monophasic(amplitude,duration,varargin)
+         	%
+            %   obj = mcs.stg.waveform.monophasic(amplitude,duration,varargin)
+            %
+            %   Inputs
+            %   ------
+            %   amplitude : 
+            %   duration : 
+            %
+            %   Optional Inputs
+            %   ---------------
+            %   amp_units : 
+            %       - 'mA'
+            %       - 'uA' (default)
+            %       - 'nA'
+            %       - 'V'
+            %       - 'mV'
+            %       - 'uV'
+            %   duration_units : 
+            %       - 's'
+            %       - 'ms' (default)
+            %       - 'us'
+            %
+            %   Example
+            %   ---------------------
+            %   %1 uA, 0.1 ms duration
+            %   w = mcs.stg.waveform.monophasic(1,0.1)
+            %
+            %   %+/- 1 mA, 100 us duration each
+            %
+            %   Improvements
+            %   ------------
+            %   1) Allow ratio/duration scaling
+            %   2) Allow spacing between pulses
+            
+            in.amp_units = 'uA';
+            in.duration_units = 'ms';
+            in = sl.in.processVarargin(in,varargin);
+            
+            obj = mcs.stg.waveform();
+            obj.shape_type = 'biphasic';
+            
+            h__processAmplitudes(obj,amplitude,in.amp_units)
+            
+            h__processDurations(obj,duration,in.duration_units)
+        end
         function obj = biphasic(amplitude,duration,varargin)
             %
             %   obj = mcs.stg.waveform.biphasic(amplitude,duration,varargin)

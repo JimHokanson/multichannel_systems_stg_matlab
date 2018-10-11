@@ -14,6 +14,21 @@ classdef trigger < handle
     %   This class can be obtained from a device. You can
     %   change the 'values' property of the channel_maps and syncout_maps
     %   as well as the repeats
+    %
+    %   It is probably better to work with the setupTrigger method
+    %   of the stimulator. This is better for looking at the connections.
+    %
+    %   Stale Values 
+    %   ------------
+    %   TODO: When we manually update the trigger, this class can become
+    %   stale. Ideally we would  link back to the parent for querying
+    %   the current values.
+    %
+    %   tr = s.trigger_settings;
+    %   map = mcs.utils.bitmask({[1 2 3 4] 0 0 0});
+    %   s.setupTrigger('channel_maps',map,'syncout_maps',map)
+    %   %Now tr is out of date
+
     
     properties (Hidden)
         d  %mcs.stg.sdk.cstg200x_download

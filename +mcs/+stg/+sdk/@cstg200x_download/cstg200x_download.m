@@ -84,10 +84,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     methods
         function sentDataToDevice(obj,channel_1b,data,varargin)
            %x Sends data to the device
+           %
+           %    sentDataToDevice(obj,channel_1b,data,varargin)
            %    
            %    Inputs
            %    ------
            %    channel_1b : 
+           %        Which channel to send the data to ...
            %    data : mcs.stg.pulse_train OR ...
            %        Currently only a pulse train input is supported.
            %
@@ -97,14 +100,26 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %        - 'new' (default)
            %        - 'append'
            %    mirror_to_sync : (default false)
-           %        TODO
+           %        If true, sync_mode is applied to generate a sync
+           %        pattern to play.
            %    sync_mode: NYI (default 'all_pulses')
+           %        Only all_pulses is implemented
            %        - 'start' - sync pulse corresponding to t = 0
-           %        - 'first_pulse'
-           %        - 'all_pulses'
+           %                    => this would require a duration for the
+           %                    sync
+           %        - 'first_pulse' - only make first pulse show up as sync
+           %        - 'all_pulses' - all pulses show up as sync
            %        - 'first_and_last_pulses' - this could be tricky to define
-           %        - 'start_and_end'
+           %                because of repeats
+           %        - 'start_and_end' - also tricky, when do we stop
+           %
+           %        I think it is best to only implement the first 3 and
+           %        then provide sync functionality ...
+           %
            %    sync_pattern: NYI
+           %        The idea here is that we would allow a specification
+           %        of the exact sync pattern, similar to how we 
+           %        allow a pattern for the data.
            %
            %    TODO: The sync generation should be its own functionality.
            %
@@ -117,8 +132,8 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    Improvements
            %    -------------
            %    1) Don't allow this if we are stimulating already
-           
-           
+           %
+           %
            %    Implements
            %    ----------
            %    prepareAndSendData
@@ -145,6 +160,9 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                wtf1 = c_stim.prepareData(data);
                obj.setChannelCapacity(wtf1.DeviceDataLength,'start_chan',channel_1b);
                if in.mirror_to_sync
+                  %I think this call is unecessary, because I think
+                  %only the length is needed, which is the same as 1
+                  %for now ...
                   wtf2 = c_stim.prepareSyncData(data);
                   obj.setSyncCapacity(wtf2.DeviceDataLength,'start_chan',channel_1b);
                end

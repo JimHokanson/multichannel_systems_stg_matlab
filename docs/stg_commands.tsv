@@ -1,0 +1,4 @@
+	download_basic	setChannelAndSyncCapacity
+ClearChannelData	download_basic	NYI
+ClearSyncData	download_basic	NYI
+DisableAutoReset	download_basic	NYI
