@@ -157,7 +157,7 @@ classdef cstg200x_basic < handle
             %   -------------
             %   1) By default, check that we are not stimulating already
             %   ...
-            
+            %
             %   TODO: Let's add an optional check for the program being
             %   present ...
             %   TODO: What happens if there is no program? Silent fail?

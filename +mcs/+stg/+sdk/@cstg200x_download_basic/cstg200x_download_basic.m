@@ -56,7 +56,10 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     properties
         d2 = '-------- mcs.stg.sdk.cstg200x_download_basic -------'
     end
-    
+ 
+   
+    %More properties in:
+    %   mcs.stg.sdk.cstg200x_basic
     properties (Dependent)
         trigger_settings   %mcs.stg.trigger
         
@@ -71,7 +74,12 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         n_sweeps
         n_triggers
         
-        stimulus
+        stimulus %mcs.stg.sdk.c_stimulus_function
+        %Not really useful to most users, has a function which
+        %allows us to know how much data is needed for a given stimulus.
+        %
+        %The mapping between stimuli and memory usage is not immediately
+        %clear.
     end
     
     methods
@@ -162,7 +170,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %
             %   % 2.5) ...
             %   map = mcs.utils.bitmask({1 2 [3 4]});
-            %   d.setupTrigger('channel_maps',map,'syncout_map',map,'first_trigger',2)
+            %   d.setupTrigger('channel_maps',map,'syncout_maps',map,'first_trigger',2)
             %
             %   % 3) Let trigger 2 start 2 & 3 together, with trigger 4
             %   %    targeting 4. Syncouts will be updated so that
@@ -180,6 +188,10 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   1) Can we have overlapping trigger to channel maps?
             %    Presumably this should be ok, we just can't trigger
             %    both triggers at the same time ...
+            %
+            %   See Also
+            %   --------
+            %   mcs.stg.trigger
             
             
             ERR_ID = 'mcs:stg:sdk:cstg200x_download_basic';
@@ -271,6 +283,19 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
         function setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
             %
             %   setChannelAndSyncCapacity(obj,chan_cap,sync_cap)
+            %
+            %   TODO: Finish documentation
+            %
+            %   Important Usage Note
+            %   This should be done first before writing anything to memory
+            %   as I think it rewrites everything.
+            %
+            %   i.e. don't set chan 1, then upload to 1, then set memory
+            %   for channel 2, since this may break channel 1s data (maybe)
+            %
+            %   Optional Inputs
+            %   ---------------
+            %   
             %
             
             in.all = false;

@@ -8,6 +8,10 @@ classdef pulse_train < matlab.mixin.Copyable
     %   mcs.stg.pulse_train.fixed_rate
     %   mcs.stg.pulse_train.fromTimes
     %
+    %   This holds onto a specification of a stimulus. Essentially
+    %   amplitudes and durations of those amplitudes.
+    %
+    %
     %   See Also
     %   --------
     %   mcs.stg.waveform
@@ -80,28 +84,62 @@ classdef pulse_train < matlab.mixin.Copyable
             %   waveform : default 1 amp_unit, 100 us, biphasic
             %       The waveform that gets replicated.
             %
-            %   n_pulses : 
-            %   pulses_duration :
+            %   n_pulses : (default 1)
+            %       # of pulses in a train. Note with only one pulse
+            %       and no train, an infinite repeat will yield the desired
+            %       stim rate because of the duration of zero amplitude
+            %       that follows the pulse.
+            %   pulses_duration : units (s)
+            %       Used to compute the # of pulses in a train if n_pulses
+            %       is not specified.
             %       
             %
             %   trains_rate :
-            %       Rate of repetition of a series of pulses.
+            %       Rate of repetition of a series of n_pulses.
             %
-            %   n_trains : 
+            %   n_trains : Default of 1 train 
+            %       
             %   trains_duration : 
+            %
+            %   Visual Parameter Explanation
+            %   ----------------------------
+            %
+            %   -----------  1/train_rate  
+            %   | | |     | | |      | | |    <= 3 pulses in trains
+            %   ---  1/rate
+            %   1 2 3 <= based on n_pulses or pulses_duration
+            %
             %
             %   Improvements
             %   ------------
             %   1) Clarify meaning of duration (start of pulse? end of
-            %   pulse? - what detrmines # of pulses?
+            %   pulse? - what determines # of pulses?
             %
             %   Examples
             %   --------
             %   % 1) 10 Hz pulse train
             %   pt1 = mcs.stg.pulse_train.fixed_rate(10);
             %
-            %   % 2) 3 pulses at 40 Hz, repeated at 2 Hz
+            %   % 2) 3 pulses at 40 Hz, repeated at 2 Hz train rate
             %   pt2 = mcs.stg.pulse_train.fixed_rate(40,'n_pulses',3,'train_rate',2);
+            %
+            %   % 3) 20 Hz pulse train with 200 us monophasic pulses 1 mA
+            %   w = mcs.stg.waveform.monophasic(1,200,'amp_units','mA','duration_units','us')
+            %   plot(w) %Verify this looks ok
+            %   pt3 = mcs.stg.pulse_train.fixed_rate(20,'waveform',w)
+            %   %Let's make it 5 mA
+            %   pt3_5mA = 5*pt3;
+            %
+            %   % 4) 100 Hz pulses for 10 seconds
+            %   pt4 = mcs.stg.pulse_train.fixed_rate(100,'pulses_duration',10)
+            %   %Note, this takes up a decent amount of memory. Any longer
+            %   %and it would be bettter to specify repeats of a single 
+            %   %pulse.
+            %
+            %
+            %   See Also
+            %   ---------
+            %   mcs.stg.waveform.biphasic
             
             ERR_ID = 'mcs:stg:pulse_train:fixed_rate';
             
@@ -118,6 +156,7 @@ classdef pulse_train < matlab.mixin.Copyable
             in = sl.in.processVarargin(in,varargin);
             
             if isempty(in.waveform)
+                %1 uA, 0.1 ms
                 waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
             else
                 waveform = in.waveform;
@@ -151,6 +190,17 @@ classdef pulse_train < matlab.mixin.Copyable
             %Train handling
             %--------------------------------------------------------------
             if ~isempty(in.train_rate) 
+                %For trains, we can't keep the zeroing at the end
+                %since we add it back in via train rate
+                %
+                % | <= pulse
+                % - <= zero amplitude spacer
+                %
+                % |--|--|--  <= pattern before train
+                % |--|--|    <= dropping of last zero
+                % |--|--|------ <= add zeros for specifying traing rate
+                % |--|--|------|--|--|------ <= train pattern
+                %
                 obj.dropLastValue();
                 
                 train_dt = 1/in.train_rate;
@@ -178,9 +228,14 @@ classdef pulse_train < matlab.mixin.Copyable
     
     methods
         function [a,d] = getStimValues(obj)
-            %1 nA int32
-            %1 uV int32
-            %1 us uint64
+            %
+            %   This is for uploading to the stimulator.
+            %
+            %   We need to convert to integers for upload.
+            %
+            %   1 nA int32
+            %   1 uV int32
+            %   1 us uint64
             %
             %mV
             %uA
