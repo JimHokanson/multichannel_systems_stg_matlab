@@ -83,7 +83,7 @@ classdef bitmask < handle
             
             in.raw = false;
             in.type = 'uint32';
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             if in.raw
                 

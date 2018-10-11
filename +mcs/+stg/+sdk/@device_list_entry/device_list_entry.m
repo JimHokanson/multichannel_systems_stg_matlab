@@ -1,4 +1,4 @@
-classdef device_list_entry < sl.obj.display_class
+classdef device_list_entry < handle
     %
     %   Class:
     %   mcs.stg.sdk.device_list_entry

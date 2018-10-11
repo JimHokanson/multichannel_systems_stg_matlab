@@ -58,7 +58,7 @@ in.keep_last_d = false;
 in.d         = ',';
 in.keep_rows = false;
 in.remove_empty = false;
-in = sl.in.processVarargin(in,varargin);
+in = mcs.sl.in.processVarargin(in,varargin);
 
 if isempty(cellstr_input)
     str = '';

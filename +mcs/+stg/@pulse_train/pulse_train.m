@@ -52,7 +52,7 @@ classdef pulse_train < matlab.mixin.Copyable
             
             in.amp_units = 'uA';
             in.waveform = []; %mcs.stg.waveform
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             if isempty(in.waveform)
                 waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
@@ -153,7 +153,7 @@ classdef pulse_train < matlab.mixin.Copyable
             in.n_trains = [];
             in.trains_duration = [];
             %-----------------------------            
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             if isempty(in.waveform)
                 %1 uA, 0.1 ms
@@ -269,7 +269,7 @@ classdef pulse_train < matlab.mixin.Copyable
             temp2 = [obj.amplitudes(:) obj.amplitudes(:)]';
             
             plot(temp(:),temp2(:));
-            sl.plot.postp.scaleAxisLimits();
+            mcs.sl.plot.postp.scaleAxisLimits();
         end
         function out = mtimes(a,b)
             %x Multiply by scalar

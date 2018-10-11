@@ -78,7 +78,7 @@ classdef waveform < handle
             
             in.amp_units = 'uA';
             in.duration_units = 'ms';
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
             obj.shape_type = 'biphasic';
@@ -124,7 +124,7 @@ classdef waveform < handle
             
             in.amp_units = 'uA';
             in.duration_units = 'ms';
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
             obj.shape_type = 'biphasic';
@@ -148,7 +148,7 @@ classdef waveform < handle
             temp2 = [plot_amplitudes(:) plot_amplitudes(:)]';
             
             plot(temp(:),temp2(:));
-            sl.plot.postp.scaleAxisLimits();
+            mcs.sl.plot.postp.scaleAxisLimits();
             ylabel(sprintf('Amplitude (%s)',obj.plot_amp_units))
             xlabel(sprintf('Duration (%s)',obj.plot_duration_units))
         end

@@ -161,7 +161,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            in.use_sync = true;
            in.sync_mode = 'all_pulses';
            in.verify_capacity = true;
-           in = sl.in.processVarargin(in,varargin);
+           in = mcs.sl.in.processVarargin(in,varargin);
            
            %a - amplitude
            %d - durations
