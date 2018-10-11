@@ -93,9 +93,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %
            %    Optional Inputs
            %    ---------------
+           %    set_mem : default true
+           %        This should basically always be true unless you wanted
+           %        to append, then all memory management would need to be
+           %        done before uploading.
            %    mode : string
            %        - 'new' (default)
-           %        - 'append'
+           %        - 'append' NYI - requires complicated memory management
            %    mirror_to_sync : (default false)
            %        TODO
            %    sync_mode: NYI (default 'all_pulses')
@@ -124,8 +128,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    prepareAndSendData
            %    PrepareAndAppendData 
            
-           SET_MEM = true;
-           
+           in.set_mem = true;
            in.mode = 'new';  
            in.mirror_to_sync = false;
            in.sync_mode = 'all_pulses';
