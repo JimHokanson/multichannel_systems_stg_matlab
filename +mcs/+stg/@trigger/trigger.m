@@ -24,7 +24,12 @@ classdef trigger < handle
         %TODO: The behavior is currently undefined if we switch from
         %false back to true - what do we want then?????
         sync_to_device = true
-        %When true, changes to the 
+        %When true, changes to the class are mirrored to the device.
+        %
+        %The idea (NYI) is that we could setup a trigger that is not
+        %connected to the device but that gets added. In other words, that 
+        %we could swap between two triggers. This was never really
+        %implemented.
         
         
         n_chans

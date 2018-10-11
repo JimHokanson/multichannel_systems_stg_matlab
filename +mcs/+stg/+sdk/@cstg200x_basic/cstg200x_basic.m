@@ -1,4 +1,4 @@
-classdef cstg200x_basic < sl.obj.display_class
+classdef cstg200x_basic < handle
     %
     %   Class:
     %   mcs.stg.sdk.cstg200x_basic
