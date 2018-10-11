@@ -53,7 +53,9 @@ classdef bitmask < handle
             %
             %   Inputs
             %   ------
-            %   value : 
+            %   value : cell or array
+            %       Array values are interpreted as being raw, but must
+            %       use 'raw' flag
             %
             %   Optional Inputs
             %   ---------------
@@ -73,6 +75,11 @@ classdef bitmask < handle
             %
             %   %Verification of 0 working
             %   b = mcs.utils.bitmask({1,0,6});
+            %
+            %   %Empty is ok as well
+            %   temp = cell(1,4);
+            %   temp{2} = [1 2];
+            %   b = mcs.utils.bitmask(temp);
             
             in.raw = false;
             in.type = 'uint32';
@@ -140,6 +147,9 @@ end
 function value = h__expandedToValue(obj,fh,expanded_values)
                 %   TODO: The conversion approach might fail with uint64
                 %   since we are using double for the calculation
+    
+    expanded_values(cellfun('isempty',expanded_values)) = {0};            
+                
     value = cellfun(@(x) fh(sum(floor(2.^(x - 1)))),expanded_values);
     
    %{
