@@ -11,25 +11,37 @@ The code currently has dependencies which I need to remove (see section on Depen
 Here is a basic usage example.
 ```matlab
 %This assumes that only one device is present or that we want the first one.
-d = mcs.getStimulator();
+s = mcs.getStimulator();
 
-%By default we have only 1 repeat, 0 means infinite repeats
-d.trigger_settings.repeats(1) = 0;
+%For reference
+tr = s.trigger_settings;
+disp(tr);
+
+%Typically I run:
+%Note this sets all triggers to have infinite repeats (manual stim stopping)
+s.setupTrigger('linearize',true,'repeat_all',0);
+
+%Unfortunately you need to get tr again to see the updates. Eventually I'll link everything ...
+%Issue #1
+tr = s.trigger_settings;
+disp(tr);
 
 %Lots of options here.
 %This will create a 40 Hz, 500 uA train of biphasic pulses
 pt = 500*mcs.stg.pulse_train.fixed_rate(40);
 
-%TODO: Working on sync mirroring ...
-d.sentDataToDevice(1,pt);
-d.startStim;
+%Stimulate on channel 1 with this pattern
+%Curently pattern is automatically copied to the sync channel as well
+s.sentDataToDevice(1,pt);
 
-d.stopStim;
+s.startStim;
+
+s.stopStim;
 ```
 
 ## Dependencies
 
-Currently the code relies on my Matlab Standard Library (https://github.com/JimHokanson/matlab_standard_library) although I will remove this dependency at some point ...
+The driver necessary for this code is included. You might need to have MC Stimulus II installed as well ...
 
 ## How this Code Works
 

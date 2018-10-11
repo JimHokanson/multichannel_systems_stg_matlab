@@ -1,3 +1,3 @@
 # Hardware specs #
 
-- 20 us resolution
+- 20 us time resolution - currently minimal to no checks in code for this ...
