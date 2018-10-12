@@ -50,8 +50,8 @@ function base_path = getMyBasePath(file_name,varargin)
 %   See Also:
 %       sl.dir.filepartsx
 
-% in.n_dirs_up  = 0;
-% in.n_callers_up = 0;
+in.n_dirs_up  = 0;
+in.n_callers_up = 0;
 % in = mcs.sl.in.processVarargin(in,varargin);
 
 
