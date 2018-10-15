@@ -87,14 +87,14 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
         end
     end
     methods
-        function sentDataToDevice(obj,channel_1b,data,varargin)
+        function sentDataToDevice(obj,channels_1b,data,varargin)
            %x Sends data to the device
            %
-           %    sentDataToDevice(obj,channel_1b,data,varargin)
+           %    sentDataToDevice(obj,channels_1b,data,varargin)
            %    
            %    Inputs
            %    ------
-           %    channel_1b : 
+           %    channels_1b : 
            %        Which channel or channels to send the data to
            %    data : mcs.stg.pulse_train OR ...
            %        Currently only a pulse train input is supported.
@@ -172,7 +172,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %c_stim : mcs.stg.sdk.c_stimulus_function
            c_stim = obj.stimulus;
            
-           n_channels = length(channel_1b);
+           n_channels = length(channels_1b);
            if ~iscell(data)
                data = {data};
            end
@@ -185,7 +185,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            %Setup of raw outputs for hardware
            %----------------------------------------
-           raw_data = struct('id',num2cell(channel_1b),'a',[],'d',[],'type','','s',[]);
+           raw_data = struct('id',num2cell(channels_1b),'a',[],'d',[],'type','','s',[]);
            for i = 1:n_channels
                cur_data = data{i};
                [a,d] = cur_data.getStimValues();
@@ -213,7 +213,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            if in.set_mem
                [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
                for i = 1:n_channels
-                   cur_chan = channel_1b(i);
+                   cur_chan = channels_1b(i);
                    wtf1 = c_stim.prepareData(raw_data(i));
                    len = wtf1.DeviceDataLength;
                    chan_capacity(cur_chan) = len;
@@ -233,7 +233,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %---------------------------------
            sync_type = mcs.enum.stg_destination.sync;
            for i = 1:n_channels
-               channel_0b = uint32(channel_1b(i)-1);
+               channel_0b = uint32(channels_1b(i)-1);
                r = raw_data(i);
                switch in.mode
                    case 'append'
