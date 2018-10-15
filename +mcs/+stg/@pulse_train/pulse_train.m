@@ -212,7 +212,7 @@ classdef pulse_train < matlab.mixin.Copyable
                 obj.addValue(0,between_train_dt);
                 
                 if ~isempty(in.trains_duration)
-                    n_trains = floor(in.trains_duration)/dt;
+                    n_trains = floor(in.trains_duration/train_dt);
                 elseif ~isempty(in.n_trains)
                     n_trains = in.n_trains;
                 else
