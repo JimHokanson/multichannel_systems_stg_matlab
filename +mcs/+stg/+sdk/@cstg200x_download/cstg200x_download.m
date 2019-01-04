@@ -185,7 +185,13 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            %Setup of raw outputs for hardware
            %----------------------------------------
-           raw_data = struct('id',num2cell(channels_1b),'a',[],'d',[],'type','','s',[]);
+           raw_data = struct('id',num2cell(channels_1b),...
+               'a',[],'d',[],'type','','s',[],'sd',[]);
+           %struct for sending to HW
+           %.a - amplitude
+           %.d - duration
+           %.s - sync amplitude
+           %.sd - sync duration
            for i = 1:n_channels
                cur_data = data{i};
                [a,d] = cur_data.getStimValues();
@@ -205,12 +211,32 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                    %This could change depending on how we process sync ...
                    a(a ~= 0) = 1;
                    raw_data(i).s = a;
+                   
+                   %Ideally we would have something like a minimum
+                   %high time based on the sampling rate
+                   %
+                   %TEMP JIM HACK, extend sync for 20k sampling
+                   USE_HACK = 1; %set to 0 to revert to old behavior
+                   if USE_HACK
+                       if length(d) == 3 && d(1) == 20 && d(2) == 20 && d(3) >= 40 && a(3) == 0
+                           sd = d;
+                           sd(2) = 40; %add 20 to 2nd phase
+                           sd(3) = d(3)-20; %remove 20 off zero phase
+                       else
+                           sd = d;
+                       end
+                   else
+                       sd = d;
+                   end
+                   raw_data(i).sd = sd;
                end
            end
            
            %Memory setup 
            %------------------------------------------
            if in.set_mem
+               %get current values, then override with what we are going
+               %to use
                [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
                for i = 1:n_channels
                    cur_chan = channels_1b(i);
@@ -218,6 +244,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                    len = wtf1.DeviceDataLength;
                    chan_capacity(cur_chan) = len;
                    if in.use_sync
+                       %mcs.stg.sdk.c_stimulus_function>prepareSyncData
                        wtf1 = c_stim.prepareSyncData(raw_data(i));
                        len = wtf1.DeviceDataLength;
                        sync_capacity(cur_chan) = len;
@@ -239,12 +266,12 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                    case 'append'
                        obj.h.PrepareAndAppendData(channel_0b,r.a,r.d,r.type);
                        if in.use_sync
-                          obj.h.PrepareAndAppendData(channel_0b,r.s,r.d,sync_type); 
+                          obj.h.PrepareAndAppendData(channel_0b,r.s,r.sd,sync_type); 
                        end
                    case 'new'
                        obj.h.PrepareAndSendData(channel_0b,r.a,r.d,r.type);
                        if in.use_sync
-                          obj.h.PrepareAndSendData(channel_0b,r.s,r.d,sync_type);
+                          obj.h.PrepareAndSendData(channel_0b,r.s,r.sd,sync_type);
                        end
                    otherwise
                        error('Unrecognized mode')

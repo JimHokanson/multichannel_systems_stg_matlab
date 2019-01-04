@@ -87,9 +87,14 @@ classdef c_stimulus_function
         function value = prepareSyncData(obj,data)
             %
             %   TODO: Update documentation, very similar to prepareData
+            %
+            %   See Also
+            %   ---------
+            %   mcs.stg.sdk.cstg200x_download>sentDataToDevice
+            
             if isstruct(data)
                 a = data.s; %Note we use s here for sync
-                d = data.d;
+                d = data.sd;
             else
                 [a,d] = data.getStimValues();
                 a(a ~= 0) = 1;

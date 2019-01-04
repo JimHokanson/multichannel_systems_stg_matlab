@@ -4,6 +4,9 @@ function device = getDevice()
 %   device = mcs.stg.getDevice()   
 %
 %   TODO: Add options
+%
+%   TODO: replace all instances of this with
+%   mcs.getStimulator()
 
 
 %   TODO: We need to flush out retrieval options

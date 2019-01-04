@@ -96,9 +96,13 @@ classdef device_list < handle
             entry = mcs.stg.sdk.device_list_entry(temp_h);
             
         end
-%         function getEntries(obj)
-%             
-%         end
+        function devs = getAllEntries(obj)
+            temp = cell(1,obj.count);
+            for i = 1:obj.count
+                temp{i} = obj.getEntry(i);
+            end
+            devs = [temp{:}];
+        end
     end
     
 end
