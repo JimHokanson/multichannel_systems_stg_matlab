@@ -7,6 +7,7 @@ classdef waveform < handle
     %
     %   Constructors
     %   ------------
+    %   mcs.stg.waveform.monophasic
     %   mcs.stg.waveform.biphasic
         
     properties
@@ -15,7 +16,7 @@ classdef waveform < handle
         shape_type
         %- monophasic
         %- biphasic
-        %- arbitrary
+        %- arbitrary - NYI
         
         %This will all be in standard units
         amplitudes     
