@@ -12,6 +12,11 @@ function d = getStimulator(id)
 %   index : default 1 (1 based)
 %       Allows us to specify which stimulator to work with (if multiple
 %       stimulators are connected.
+%   serial : string
+%       The serial number of the device.
+%   product : string
+%       The type of stimulator (see example). Note that unlike a serial or
+%       an index a product string does not uniquelly identify a stimulator.
 %
 %   Outputs
 %   -------
@@ -25,6 +30,10 @@ function d = getStimulator(id)
 %   Notes
 %   -----
 %   1) Streaming interface not supported
+%
+%   Improvements
+%   ------------
+%   1) When a product make sure that we only have 1 match
 
 if nargin == 0
     id = 1;

@@ -2,15 +2,22 @@
 
 Multi-Channel Systems (MCS) provides software that allows for communication with their stimulus generators (STG). This Matlab code wraps their drivers.
 
+The streaming interface is not supported. In other words, the goal of this software is to design a stimulus that gets uploaded to the stimulator at one point in time then run. Any changes to the stimulus require reuploading a new stimulus to the stimulator.
+
+**Bonus** This library contains code which can be used to generate stimulus pulse trains for use in uploading to a DAQ [see here](docs/stimulation_pattern_design.md).
+
 ## Status
 
-Many functions exposed by the driver are not yet implemented in Matlab, although most are relatively trivial to implement. Basic functionality of starting and stopping stimuli on channels is implemented.
+Many functions exposed by the driver are not yet implemented in Matlab, although most are relatively trivial to implement. Basic functionality of starting and stopping stimuli on channels is implemented. The one big feature not yet supported is to have multiple segments of stimulation, where each segment gets repeated a different number of times. This feature is exposed in the MC Stimulus II GUI (https://www.multichannelsystems.com/software/mc-stimulus-ii) but not yet in this software.  
+
+I currently have minimal testing for the library so please test that your code is working as intended. Any help with adding tests would be appreciated.
 
 ## Basic Usage
 
 Here is a basic usage example.
 ```matlab
 %This assumes that only one device is present or that we want the first one.
+%See help mcs.getStimulator
 s = mcs.getStimulator();
 
 %For reference
@@ -22,7 +29,7 @@ disp(tr);
 s.setupTrigger('linearize',true,'repeat_all',0);
 
 %Unfortunately you need to get tr again to see the updates. Eventually I'll link everything ...
-%Issue #1
+%See Issue #1
 tr = s.trigger_settings;
 disp(tr);
 
@@ -37,6 +44,18 @@ s.sentDataToDevice(1,pt);
 s.startStim;
 
 s.stopStim;
+
+%------------------------------------------------------------
+%Let's use two patterns on two channels:
+pt2 = 100*mcs.stg.pulse_train.fixed_rate(10);
+
+%Send the first pattern to channel 1 and the 2nd pattern to channel 3
+s.sentDataToDevice([1 3],{pt,pt2});
+
+s.startStim;
+
+s.stopStim;
+
 ```
 
 ## Dependencies
@@ -55,4 +74,4 @@ Documentation for the driver is provided in 'McsUsbNet_for_STG.chm'
 
 ## Stimulus Design
 
-TODO: Describe this
+The design of stimulation patterns is described [here](docs/stimulation_pattern_design.md).

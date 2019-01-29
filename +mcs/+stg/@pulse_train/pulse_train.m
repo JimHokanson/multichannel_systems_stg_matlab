@@ -7,6 +7,7 @@ classdef pulse_train < matlab.mixin.Copyable
     %   ------------
     %   mcs.stg.pulse_train.fixed_rate
     %   mcs.stg.pulse_train.fromTimes
+    %   mcs.stg.pulse_train.fromAmpDurationArrays
     %
     %   This holds onto a specification of a stimulus; essentially
     %   amplitudes and durations of those amplitudes.
@@ -99,6 +100,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %   Optional Inputs (at end as key/value pairs)
             %   --------------------------------------------
             %   output_type : default 'current'
+            %       - 'current'
+            %       - 'voltage'
             %   min_time_dt : default mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT
             %
             %   Example
@@ -154,7 +157,7 @@ classdef pulse_train < matlab.mixin.Copyable
             %   Examples
             %   ----------
             %   %#1
-            %   isi = randi(50,1,1000)/1000; %/1000 for s to ms
+            %   isi = randi(50,1,1000)/1000; %/1000 for ms to s conversion
             %   t = cumsum(isi);
             %   pt = mcs.stg.pulse_train.fromTimes(t);
             %
@@ -448,7 +451,9 @@ classdef pulse_train < matlab.mixin.Copyable
             %   Inputs
             %   ------
             %   t : scalar
-            %       Time to expand the duration ...
+            %       Time to expand the specified duration segment. A
+            %       positive value expands whereas a negative value
+            %       will shorten the segment.
             %
             %   Optional Inputs
             %   ---------------
@@ -516,9 +521,17 @@ classdef pulse_train < matlab.mixin.Copyable
             end
             
             I = find(in.mask);
-            prev_durations = obj.durations(I-1);
-            if any(prev_durations < t)
-                error('Unable to expand past multiple values, one of the neighboring durations is too short')
+            if t > 0
+                prev_durations = obj.durations(I-1);
+                if any(prev_durations < t)
+                    error('Unable to expand past multiple values, one of the preceeding durations is too short')
+                end
+            else 
+                %TODO: Test this
+                cur_durations = obj.durations(I);
+                if any(cur_durations < abs(t))
+                    error('Unable to shorten current duration beyond having a 0 duration')
+                end
             end
             
             %The actual expansion, expand by taking from neighbor
@@ -617,9 +630,17 @@ classdef pulse_train < matlab.mixin.Copyable
             end
             
             I = find(in.mask);
-            next_durations = obj.durations(I+1);
-            if any(next_durations < t)
-                error('Unable to expand past multiple values, one of the subsequent values is too short')
+            if t > 0
+                next_durations = obj.durations(I+1);
+                if any(next_durations < t)
+                    error('Unable to expand past multiple values, one of the subsequent values is too short')
+                end
+            else 
+                %TODO: Test this
+                cur_durations = obj.durations(I);
+                if any(cur_durations < abs(t))
+                    error('Unable to shorten current duration beyond having a 0 duration')
+                end
             end
             
             %The actual expansion, expand by taking from neighbor
@@ -651,9 +672,18 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   This can also be used for blanking.
             %
+            %
             %   Optional Inputs
             %   ---------------
-            %   sync_amp : 1
+            %   simplify : default true
+            %       If true values with the same amplitude in the sync
+            %       signal (from taking absolute value) are merged into one
+            %       duration segment. This can be useful for later
+            %       duration expansion.
+            %   output_type : default 'voltage'
+            %       - 'current'
+            %       - 'voltage'
+            %   sync_amp : default 1
             %       By default the non-zero amplitude is 1. This can be
             %       changed here or it can be modified afterwards by
             %       multiplication, as per the example.
@@ -670,13 +700,21 @@ classdef pulse_train < matlab.mixin.Copyable
             %   set(gca,'YLim',[-120 120])
             %       
             
+            in.simplify = true;
+            in.output_type = 'voltage';
             in.sync_amp = 1;
             in = mcs.sl.in.processVarargin(in,varargin);
             %copy, then take absolute value and simplify
-            new_obj = simplify(abs(copy(obj)));
+            %   - abs() can create neighboring segments with the same
+            %     amplitude
+            %
+            new_obj = abs(copy(obj));
+            if in.simplify
+                new_obj = simplify(new_obj);
+            end
+            
             new_obj.amplitudes(new_obj.amplitudes ~= 0) = in.sync_amp;
-            %TODO: Could be optional ...
-            new_obj.output_type = 'voltage';
+            new_obj.output_type = in.output_type;
         end
         function varargout = addLeadingZeroTime(obj,t)
             %x Adds stim at 0 amplitude at beginning of pattern
@@ -858,10 +896,20 @@ classdef pulse_train < matlab.mixin.Copyable
                 varargout{1} = obj;
             end
         end
-        function [amplitude,dt] = getSampledArray(obj,dt,varargin)
+        %TODO: Create getSampledArrays function which takes in multiple
+        %pulse train objects
+        %[amplitudes,dt,time_array] = getSampledArrays(obj1,other_objects,dt,varargin)
+        %
+        %   other_objects - either a cell array or regular array
+        %
+        %   gets shared dt and also does a duration check
+        %
+        %   output units
+        
+        function [amplitude,dt,time_array] = getSampledArray(obj,dt,varargin)
             %x Helper function for returning array as samples ...
             %
-            %   [amplitude,dt] = getSampledArray(obj,dt,varargin)
+            %   [amplitude,dt] = obj.getSampledArray(dt,varargin)
             %
             %   Inputs
             %   ------
@@ -969,6 +1017,11 @@ classdef pulse_train < matlab.mixin.Copyable
                 end_I = end_I + n_samples_per_duration(i);
                 amplitude(start_I:end_I) = amplitudes_local(i);
             end
+            
+            if nargout == 3
+                time_array = (0:length(amplitude)-1).*dt;
+            end
+            
         end %end getSampledArray
         function dt = getDTforPatterns(obj,varargin)
             %x Computes a shared dt appropriate for multiple patterns
