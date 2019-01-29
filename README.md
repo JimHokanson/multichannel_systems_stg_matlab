@@ -43,6 +43,7 @@ s.sentDataToDevice(1,pt);
 
 s.startStim;
 
+%Needed for infinite repeating
 s.stopStim;
 
 %------------------------------------------------------------
