@@ -4,13 +4,13 @@ Multi-Channel Systems (MCS) provides software that allows for communication with
 
 The streaming interface is not supported. In other words, the goal of this software is to design a stimulus that gets uploaded to the stimulator at one point in time then run. Any changes to the stimulus require reuploading a new stimulus to the stimulator.
 
-**Bonus** This library contains code which can be used to generate stimulus pulse trains for use in uploading to a DAQ [see here](docs/stimulation_pattern_design.md).
+\*\***Warning**\*\* At some point there were bugs in the stimulator firmware that made it not work properly with this code. If the code does not appear to be working you may need to update your stimulator firmware .... Otherwise feel free to report issues and I can look into them. Additionally, I currently have minimal testing for the library so please test that your code is working as intended. Any help with adding tests would be appreciated.
+
+\*\***Bonus**\*\* This library contains code which can be used to generate stimulus pulse trains for use in uploading to a DAQ [see here](docs/stimulation_pattern_design.md).
 
 ## Status
 
 Many functions exposed by the driver are not yet implemented in Matlab, although most are relatively trivial to implement. Basic functionality of starting and stopping stimuli on channels is implemented. The one big feature not yet supported is to have multiple segments of stimulation, where each segment gets repeated a different number of times. This feature is exposed in the MC Stimulus II GUI (https://www.multichannelsystems.com/software/mc-stimulus-ii) but not yet in this software.  
-
-I currently have minimal testing for the library so please test that your code is working as intended. Any help with adding tests would be appreciated.
 
 ## Basic Usage
 
