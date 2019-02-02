@@ -9,7 +9,7 @@ The constructors for the pulse train class are as follows:
 - mcs.stg.pulse_train.fromTimes
 - mcs.stg.pulse_train.fromAmpDurationArrays
 
-`mcs.stg.pulse_train` can be found at '\+mcs\+stg\@pulse_train\pulse_train.m'
+`mcs.stg.pulse_train` can be found at '\\+mcs\\+stg\\@pulse_train\pulse_train.m'
 
 ```matlab
 %fromAmpDurationArrays
