@@ -13,7 +13,7 @@ classdef waveform < handle
     properties
         output_type     %'current' or 'voltage'
         
-        shape_type
+        shape_type %Not used, just for reference
         %- monophasic
         %- biphasic
         %- arbitrary - NYI
@@ -82,7 +82,7 @@ classdef waveform < handle
             in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
-            obj.shape_type = 'biphasic';
+            obj.shape_type = 'monophasic';
             
             h__processAmplitudes(obj,amplitude,in.amp_units)
             
