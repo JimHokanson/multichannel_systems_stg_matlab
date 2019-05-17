@@ -65,6 +65,8 @@ classdef pulse_train < matlab.mixin.Copyable
         %# of amplitude/durations pairs
         
         net_charge
+        %JAH TODO: Units unclear, plus name is incorrect
+        %for voltage control
         %The total charge in the pulse-train.
     end
     
@@ -283,13 +285,15 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %       ----- Trains are groups of pulses ----
             %
-            %   trains_rate :
+            %   train_rate :
             %       Rate of repetition of a series of n_pulses.
             %
             %   n_trains : Default of 1 train
+            %       Requires 'train_rate' to be specified.
             %
             %   trains_duration :
-            %       Specifies how long all trains should be.
+            %       Specifies how long all trains should be. Requires 
+            %       'train_rate' to be specified.
             %
             %
             %   Visual Parameter Explanation
