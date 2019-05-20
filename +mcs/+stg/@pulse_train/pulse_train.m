@@ -58,6 +58,9 @@ classdef pulse_train < matlab.mixin.Copyable
         start_times
         stop_times
         total_duration_s
+        
+        round_dt
+        throw_rounding_dt_error
     end
     
     properties (Dependent)
@@ -117,6 +120,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %   pt2 = pt.repeat(100);
             %   plot(pt2)
             
+            in.throw_dt_error = true;
+            in.round_dt = true;
             in.output_type = 'current';
             in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
             in = mcs.sl.in.processVarargin(in,varargin);
@@ -126,6 +131,9 @@ classdef pulse_train < matlab.mixin.Copyable
             obj.output_type = in.output_type;
             obj.amplitudes = amps(:)';
             obj.durations = durations(:)';
+            
+            
+            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
             h__initTimes(obj);
             
         end
@@ -168,6 +176,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %   t = cumsum(isi);
             %   pt = mcs.stg.pulse_train.fromTimes(t);
             
+         	in.throw_dt_error = true;
+            in.round_dt = true;
             in.output_type = 'current';
             in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
             in.amp_units = 'uA';
@@ -245,6 +255,7 @@ classdef pulse_train < matlab.mixin.Copyable
             obj.output_type = waveform.output_type;
             obj.amplitudes = amplitudes;
             obj.durations = durations;
+            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
             h__initTimes(obj);
         end
         function obj = fixed_rate(rate,varargin)
@@ -343,6 +354,8 @@ classdef pulse_train < matlab.mixin.Copyable
             
             ERR_ID = 'mcs:stg:pulse_train:fixed_rate';
             
+          	in.throw_dt_error = true;
+            in.round_dt = true;
             in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
             in.amp_units = 'uA';
             in.waveform = []; %mcs.stg.waveform
@@ -390,6 +403,7 @@ classdef pulse_train < matlab.mixin.Copyable
             obj.output_type = waveform.output_type;
             obj.amplitudes = [waveform.amplitudes 0];
             obj.durations = [waveform.durations_s between_pulse_dt];
+            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
             h__initTimes(obj);
             if n_pulses > 1
                 obj = obj.repeat(n_pulses);
@@ -1183,8 +1197,9 @@ classdef pulse_train < matlab.mixin.Copyable
             
             obj.amplitudes = [obj.amplitudes amplitude];
             obj.durations = [obj.durations duration];
+            h__roundDurations(obj);
             obj.start_times = [obj.start_times obj.stop_times(end)];
-            obj.total_duration_s = obj.total_duration_s + duration;
+            obj.total_duration_s = obj.total_duration_s + obj.durations(end);
             obj.stop_times = [obj.stop_times obj.total_duration_s];
             
             if nargout
@@ -1272,6 +1287,29 @@ obj.start_times = [0 csum(1:end-1)];
 obj.stop_times = csum;
 obj.total_duration_s = csum(end);
 
+end
+
+function h__roundDurations(obj,round_flag,throw_error)
+
+    
+    if nargin > 1
+        %This should be from the constructors
+        obj.round_dt = round_flag;
+        obj.throw_rounding_dt_error = throw_error;
+    else
+        throw_error = obj.throw_rounding_dt_error;
+        round_flag = obj.round_dt;
+    end
+
+    %TODO: implement throw_error flag
+    %If the differene is large, like > 0.1 dt, throw error
+    %i.e. if we specify we want a 50 us pulse when our resolution is 20 us
+    %then indicate this in a sensible way ...
+    %
+    %
+    if round_flag
+        obj.durations = round(obj.durations./obj.min_time_dt)*obj.min_time_dt;
+    end
 end
 
 function dt = h__getDTforDurations(durations)
