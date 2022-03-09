@@ -9,7 +9,7 @@ classdef waveform < handle
     %   ------------
     %   mcs.stg.waveform.monophasic
     %   mcs.stg.waveform.biphasic
-        
+    
     properties
         output_type     %'current' or 'voltage'
         
@@ -19,7 +19,7 @@ classdef waveform < handle
         %- arbitrary - NYI
         
         %This will all be in standard units
-        amplitudes     
+        amplitudes
         internal_amp_units %either uA or mV
         
         durations_ms   %ms
@@ -43,24 +43,24 @@ classdef waveform < handle
     
     methods (Static)
         function obj = monophasic(amplitude,duration,varargin)
-         	%
+            %
             %   obj = mcs.stg.waveform.monophasic(amplitude,duration,varargin)
             %
             %   Inputs
             %   ------
-            %   amplitude : 
-            %   duration : 
+            %   amplitude :
+            %   duration :
             %
             %   Optional Inputs
             %   ---------------
-            %   amp_units : 
+            %   amp_units :
             %       - 'mA'
             %       - 'uA' (default)
             %       - 'nA'
             %       - 'V'
             %       - 'mV'
             %       - 'uV'
-            %   duration_units : 
+            %   duration_units :
             %       - 's'
             %       - 'ms' (default)
             %       - 'us'
@@ -78,7 +78,7 @@ classdef waveform < handle
             %   2) Allow spacing between pulses
             
             in.amp_units = 'uA';
-            in.duration_units = 'ms';
+            in.duration_units = 'us';%was 'ms'
             in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
@@ -94,19 +94,19 @@ classdef waveform < handle
             %
             %   Inputs
             %   ------
-            %   amplitude : 
-            %   duration : 
+            %   amplitude :
+            %   duration :
             %
             %   Optional Inputs
             %   ---------------
-            %   amp_units : 
+            %   amp_units :
             %       - 'mA'
             %       - 'uA' (default)
             %       - 'nA'
             %       - 'V'
             %       - 'mV'
             %       - 'uV'
-            %   duration_units : 
+            %   duration_units :
             %       - 's'
             %       - 'ms' (default)
             %       - 'us'
@@ -124,7 +124,9 @@ classdef waveform < handle
             %   2) Allow spacing between pulses
             
             in.amp_units = 'uA';
-            in.duration_units = 'ms';
+           
+            in.duration_units = 'us'; %was 'ms'
+          
             in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
@@ -158,86 +160,86 @@ classdef waveform < handle
 end
 
 function h__processDurations(obj,durations,duration_units)
-    switch lower(duration_units)
-        case 's'
-            obj.plot_duration_units = 's';
-            obj.durations_ms = 1000*durations;
-            obj.dur_scalar__prop_to_disp = 1/1000;
-        case 'ms'
-            obj.plot_duration_units = 'ms';
-            obj.durations_ms = durations;
-            obj.dur_scalar__prop_to_disp = 1;
-        case 'us'
-            obj.plot_duration_units = 'us';
-            obj.durations_ms = durations/1000;
-            obj.dur_scalar__prop_to_disp = 1000;
-        otherwise
-            error('Unrecognized units: %s',duration_units)
-    end
-      
-    csum = cumsum(obj.durations_ms);
-	obj.start_times_ms = [0 csum(1:end-1)];
- 	obj.stop_times_ms = csum;
-    obj.total_duration_ms = csum(end);
-    obj.total_duration_s = obj.total_duration_ms/1000;
-    obj.durations_s = obj.durations_ms/1000;
+switch lower(duration_units)
+    case 's'
+        obj.plot_duration_units = 's';
+        obj.durations_ms = 1000*durations;
+        obj.dur_scalar__prop_to_disp = 1/1000;
+    case 'ms'
+        obj.plot_duration_units = 'ms';
+        obj.durations_ms = durations;
+        obj.dur_scalar__prop_to_disp = 1;
+    case 'us'
+        obj.plot_duration_units = 'us';
+        obj.durations_ms = durations/1000;
+        obj.dur_scalar__prop_to_disp = 1000;
+    otherwise
+        error('Unrecognized units: %s',duration_units)
+end
+
+csum = cumsum(obj.durations_ms);
+obj.start_times_ms = [0 csum(1:end-1)];
+obj.stop_times_ms = csum;
+obj.total_duration_ms = csum(end);
+obj.total_duration_s = obj.total_duration_ms/1000;
+obj.durations_s = obj.durations_ms/1000;
 
 end
 
 function h__processAmplitudes(obj,amplitudes,amp_units)
-    %amplitudes     %uA or mV
-    
-    %Standard units
-    %--------------
-    %mV
-    %uA
-    
-    %TODO: Handle resolution of device ...
-    %
-    %Make this a method that allows for post-processing ...
-    
-    
-    switch lower(amp_units)
-        case 'v'
-            obj.output_type = 'voltage';
-            obj.plot_amp_units = 'V';
-            obj.amplitudes = 1000*amplitudes;
-            obj.amp_scalar__prop_to_disp = 1/1000;
-        case 'mv'
-            obj.output_type = 'voltage';
-            obj.plot_amp_units = 'mV';
-        	obj.amplitudes = amplitudes;
-            obj.amp_scalar__prop_to_disp = 1;
-        case 'uv'
-            obj.output_type = 'voltage';
-            obj.plot_amp_units = 'uV';
-            obj.amplitudes = amplitudes/1000;
-            obj.amp_scalar__prop_to_disp = 1000;
-        case 'ma'
-            obj.output_type = 'current';
-            obj.plot_amp_units = 'mA';
-            obj.amplitudes = 1000*amplitudes;
-            obj.amp_scalar__prop_to_disp = 1/1000;
-        case 'ua'
-            obj.output_type = 'current';
-            obj.plot_amp_units = 'uA';
-        	obj.amplitudes = amplitudes;
-            obj.amp_scalar__prop_to_disp = 1;
-        case 'na'
-            obj.output_type = 'current';
-            obj.plot_amp_units = 'nA';
-            obj.amplitudes = amplitudes/1000;
-            obj.amp_scalar__prop_to_disp = 1000;
-        otherwise
-            error('Unrecognized units: %s',amp_units)  
-    end
-    
-    switch obj.output_type
-        case 'voltage'
-            obj.internal_amp_units = 'mV';
-        case 'current'
-            obj.internal_amp_units = 'uA';
-    end
-    
+%amplitudes     %uA or mV
+
+%Standard units
+%--------------
+%mV
+%uA
+
+%TODO: Handle resolution of device ...
+%
+%Make this a method that allows for post-processing ...
+
+
+switch lower(amp_units)
+    case 'v'
+        obj.output_type = 'voltage';
+        obj.plot_amp_units = 'V';
+        obj.amplitudes = 1000*amplitudes;
+        obj.amp_scalar__prop_to_disp = 1/1000;
+    case 'mv'
+        obj.output_type = 'voltage';
+        obj.plot_amp_units = 'mV';
+        obj.amplitudes = amplitudes;
+        obj.amp_scalar__prop_to_disp = 1;
+    case 'uv'
+        obj.output_type = 'voltage';
+        obj.plot_amp_units = 'uV';
+        obj.amplitudes = amplitudes/1000;
+        obj.amp_scalar__prop_to_disp = 1000;
+    case 'ma'
+        obj.output_type = 'current';
+        obj.plot_amp_units = 'mA';
+        obj.amplitudes = 1000*amplitudes;
+        obj.amp_scalar__prop_to_disp = 1/1000;
+    case 'ua'
+        obj.output_type = 'current';
+        obj.plot_amp_units = 'uA';
+        obj.amplitudes = amplitudes;
+        obj.amp_scalar__prop_to_disp = 1;
+    case 'na'
+        obj.output_type = 'current';
+        obj.plot_amp_units = 'nA';
+        obj.amplitudes = amplitudes/1000;
+        obj.amp_scalar__prop_to_disp = 1000;
+    otherwise
+        error('Unrecognized units: %s',amp_units)
+end
+
+switch obj.output_type
+    case 'voltage'
+        obj.internal_amp_units = 'mV';
+    case 'current'
+        obj.internal_amp_units = 'uA';
+end
+
 end
 
