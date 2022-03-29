@@ -999,6 +999,12 @@ classdef pulse_train < matlab.mixin.Copyable
                 varargout{1} = obj;
             end
         end
+        function out = horzcat(a,b)
+           out = copy(a);
+           out.amplitudes = [out.amplitudes b.amplitudes];
+           out.durations = [out.durations b.durations];
+           h__initTimes(out);
+        end
         function varargout = abs(obj)
             %x Rectifies all stimuli
             %

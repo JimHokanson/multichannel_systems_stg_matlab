@@ -264,7 +264,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             first_trigger_0b = in.first_trigger-1;
             
             obj.h.SetupTrigger(uint32(first_trigger_0b),...
-                uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats))
+                uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats));
         end
         function trigger = getTrigger(obj)
             %x Retrieves the trigger setup info
