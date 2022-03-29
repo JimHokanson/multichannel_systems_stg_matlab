@@ -78,7 +78,7 @@ classdef waveform < handle
             %   2) Allow spacing between pulses
             
             in.amp_units = 'uA';
-            in.duration_units = 'us';%was 'ms'
+            in.duration_units = 'ms';
             in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
@@ -125,7 +125,7 @@ classdef waveform < handle
             
             in.amp_units = 'uA';
            
-            in.duration_units = 'us'; %was 'ms'
+            in.duration_units = 'ms';
           
             in = mcs.sl.in.processVarargin(in,varargin);
             
