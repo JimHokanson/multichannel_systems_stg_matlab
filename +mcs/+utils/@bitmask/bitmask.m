@@ -11,19 +11,27 @@ classdef bitmask < handle
     %   mcs.stg.trigger
     
     properties (Hidden)
-       fh 
+        fh
     end
     
     properties (SetObservable)
         values %array
         %This is the main property of this class
+        %This stores the bit mask
+        %e.g. setting bit 5 only would show up here as the value 16
+        %since 1 => 1   (bit # => numeric value)
+        %      2 => 2
+        %      3 => 4
+        %      4 => 8
+        %      5 => 16, etc.
+        
     end
     
     properties (Dependent)
         expanded_values
     end
     
-    methods 
+    methods
         function value = get.expanded_values(obj)
             switch class(obj.values)
                 case 'uint32'
@@ -60,9 +68,15 @@ classdef bitmask < handle
             %   Optional Inputs
             %   ---------------
             %   raw : default false
-            %       If true, the input values are interpreted
-            %       at being bitmask
+            %       - true - input values are interpreted as being a
+            %                bitmask => 5 => [0 1 0 1]
+            %       - false - values are interpreted as comprising a set
+            %                 which generates the bitmask
+            %                           5 => [1 0 0 0 0];
             %   type : default 'uint32'
+            %       The output data type. Set this based on the function
+            %       you need to pass the bit mask to. Currently I think 
+            %       the only type needed is 'uint32'
             %
             %   Example
             %   ---------------
@@ -80,6 +94,8 @@ classdef bitmask < handle
             %   temp = cell(1,4);
             %   temp{2} = [1 2];
             %   b = mcs.utils.bitmask(temp);
+            %
+            %   
             
             in.raw = false;
             in.type = 'uint32';
@@ -100,13 +116,13 @@ classdef bitmask < handle
                     otherwise
                         error('Type not supported')
                 end
-
+                
                 obj.values = value;
             else
                 if ~iscell(value)
                     error('Non-raw values must be input as a cell array')
                 end
-
+                
                 %Determine fh
                 %----------------------
                 switch in.type
@@ -115,7 +131,7 @@ classdef bitmask < handle
                     case 'uint64'
                         fh = @uint64;
                         %64 bits is messy in terms of the conversion
-                        %because of using double which doesn't have 
+                        %because of using double which doesn't have
                         %64 value bits
                         %=> I think we can get 2^64, but I'm not sure
                         %about overflow on summation ... - might
@@ -126,40 +142,40 @@ classdef bitmask < handle
                 end
                 
                 obj.fh = fh;
-
+                
                 %The actual conversion
                 %--------------------------
-
+                
                 obj.values = h__expandedToValue(obj,fh,value);
             end
         end
         
         %TODO: These are not yet implemented
-%         function enableBits(obj,indices)
-%             
-%         end
-%         function disableBits(obj,indices)
-%         end
+        %         function enableBits(obj,indices)
+        %
+        %         end
+        %         function disableBits(obj,indices)
+        %         end
     end
     
 end
 
 function value = h__expandedToValue(obj,fh,expanded_values)
-                %   TODO: The conversion approach might fail with uint64
-                %   since we are using double for the calculation
-    
-    expanded_values(cellfun('isempty',expanded_values)) = {0};            
-                
-    value = cellfun(@(x) fh(sum(floor(2.^(x - 1)))),expanded_values);
-    
-   %{
-    expanded_values = {1:64}; 
+%   TODO: The conversion approach might fail with uint64
+%   since we are using double for the calculation
+
+expanded_values(cellfun('isempty',expanded_values)) = {0};
+
+value = cellfun(@(x) fh(sum(floor(2.^(x - 1)))),expanded_values);
+
+%{
+    expanded_values = {1:64};
     fh = @uint64;
     value = cellfun(@(x) fh(sum(floor(2.^(x - 1)))),expanded_values);
     dec2bin(value) => incorrect
     
-    %}
-    
-    
+%}
+
+
 end
 
