@@ -9,21 +9,25 @@ classdef waveform < handle
     %   ------------
     %   mcs.stg.waveform.monophasic
     %   mcs.stg.waveform.biphasic
+    %   mcs.stg.waveform.custom
         
     properties
+        d0 = '----------- read only properties ----------'
         output_type     %'current' or 'voltage'
         
-        shape_type %Not used, just for reference
+        shape_type %Not used, just for the user's reference
         %- monophasic
         %- biphasic
-        %- arbitrary - NYI
+        %- sinusoid - NYI
+        %- custom
         
         %This will all be in standard units
-        amplitudes     
+        amplitudes %array of stimulation amplitude values    
         internal_amp_units %either uA or mV
         
         durations_ms   %ms
-        durations_s
+        durations_s %For reasons that are unclear to me know this is a
+        %duplication of the durations
         
         start_times_ms %ms
         stop_times_ms %ms
@@ -31,12 +35,17 @@ classdef waveform < handle
         total_duration_s
         
         
-        d = '--------------  Used only when plotting  -------------'
-        plot_amp_units
-        plot_duration_units
+        d1 = '--------------  Used only when plotting  -------------'
+        %Note, the amp unit is now also used by the pulse train
+        %for the choice of default units
+        user_amp_units
+        user_duration_units
     end
     
     properties (Hidden)
+        %These are scalar values that convert from the internal units
+        %of this class to the user specified units in order to display
+        %the data.
         amp_scalar__prop_to_disp
         dur_scalar__prop_to_disp
     end
@@ -94,8 +103,8 @@ classdef waveform < handle
             %
             %   Inputs
             %   ------
-            %   amplitude : 
-            %   duration : 
+            %   amplitude : scalar
+            %   duration : scalar
             %
             %   Optional Inputs
             %   ---------------
@@ -137,21 +146,79 @@ classdef waveform < handle
             durations = [duration duration];
             h__processDurations(obj,durations,in.duration_units)
         end
+        %TODO: Sinusoid ...
+        function obj = custom(amplitudes,durations,varargin)
+            %
+            %   obj = mcs.stg.waveform.custom(amplitudes,durations,varargin)
+            %
+            %   Inputs
+            %   ------
+            %   amplitudes : 
+            %       Array of stimulus amplitudes.
+            %   durations :
+            %       Array of stimulus durations, one per amplitude.
+            %
+            %   Optional Inputs
+            %   ---------------
+            %   amp_units : 
+            %       - 'mA'
+            %       - 'uA' (default)
+            %       - 'nA'
+            %       - 'V'
+            %       - 'mV'
+            %       - 'uV'
+            %   duration_units : 
+            %       - 's'
+            %       - 'ms' (default)
+            %       - 'us'
+            %
+            %   Example
+            %   ---------------------
+            %   %Creating a saw tooth like pattern ...
+            %   durations = 100*ones(1,10);
+            %   amplitudes = 1:10;
+            %   amplitudes = amplitudes - mean(amplitudes);
+            %   w = mcs.stg.waveform.custom(amplitudes,durations,'duration_units','us')
+            %
+            %   %+/- 1 mA, 100 us duration each
+            %
+            in.amp_units = 'uA';
+            in.duration_units = 'ms';
+            in = mcs.sl.in.processVarargin(in,varargin);
+            
+            obj = mcs.stg.waveform();
+            obj.shape_type = 'custom';
+            
+            h__processAmplitudes(obj,amplitudes,in.amp_units)
+            
+            h__processDurations(obj,durations,in.duration_units)
+        end
     end
     
     methods
         function plot(obj)
+            %x Plots waveform in user specified units
+            %
+            % 
+            
             plot_amplitudes = obj.amplitudes * obj.amp_scalar__prop_to_disp;
             plot_starts = obj.start_times_ms*obj.dur_scalar__prop_to_disp;
             plot_ends = obj.stop_times_ms*obj.dur_scalar__prop_to_disp;
             
+            %This get's us a sample and hold pattern, by replicating
+            %the amplitude twice, once at the start and once at the end
             temp = [plot_starts(:) plot_ends(:)]';
             temp2 = [plot_amplitudes(:) plot_amplitudes(:)]';
             
-            plot(temp(:),temp2(:));
+            %Let's have everything start and return to 0
+            %=> without this monophasic is a line 
+            temp = [plot_starts(1); temp(:); plot_ends(end)];
+            temp2 = [0; temp2(:); 0];
+            
+            plot(temp,temp2);
             mcs.sl.plot.postp.scaleAxisLimits();
-            ylabel(sprintf('Amplitude (%s)',obj.plot_amp_units))
-            xlabel(sprintf('Duration (%s)',obj.plot_duration_units))
+            ylabel(sprintf('Amplitude (%s)',obj.user_amp_units))
+            xlabel(sprintf('Duration (%s)',obj.user_duration_units))
         end
     end
     
@@ -160,15 +227,15 @@ end
 function h__processDurations(obj,durations,duration_units)
     switch lower(duration_units)
         case 's'
-            obj.plot_duration_units = 's';
+            obj.user_duration_units = 's';
             obj.durations_ms = 1000*durations;
             obj.dur_scalar__prop_to_disp = 1/1000;
         case 'ms'
-            obj.plot_duration_units = 'ms';
+            obj.user_duration_units = 'ms';
             obj.durations_ms = durations;
             obj.dur_scalar__prop_to_disp = 1;
         case 'us'
-            obj.plot_duration_units = 'us';
+            obj.user_duration_units = 'us';
             obj.durations_ms = durations/1000;
             obj.dur_scalar__prop_to_disp = 1000;
         otherwise
@@ -200,32 +267,32 @@ function h__processAmplitudes(obj,amplitudes,amp_units)
     switch lower(amp_units)
         case 'v'
             obj.output_type = 'voltage';
-            obj.plot_amp_units = 'V';
+            obj.user_amp_units = 'V';
             obj.amplitudes = 1000*amplitudes;
             obj.amp_scalar__prop_to_disp = 1/1000;
         case 'mv'
             obj.output_type = 'voltage';
-            obj.plot_amp_units = 'mV';
+            obj.user_amp_units = 'mV';
         	obj.amplitudes = amplitudes;
             obj.amp_scalar__prop_to_disp = 1;
         case 'uv'
             obj.output_type = 'voltage';
-            obj.plot_amp_units = 'uV';
+            obj.user_amp_units = 'uV';
             obj.amplitudes = amplitudes/1000;
             obj.amp_scalar__prop_to_disp = 1000;
         case 'ma'
             obj.output_type = 'current';
-            obj.plot_amp_units = 'mA';
+            obj.user_amp_units = 'mA';
             obj.amplitudes = 1000*amplitudes;
             obj.amp_scalar__prop_to_disp = 1/1000;
         case 'ua'
             obj.output_type = 'current';
-            obj.plot_amp_units = 'uA';
+            obj.user_amp_units = 'uA';
         	obj.amplitudes = amplitudes;
             obj.amp_scalar__prop_to_disp = 1;
         case 'na'
             obj.output_type = 'current';
-            obj.plot_amp_units = 'nA';
+            obj.user_amp_units = 'nA';
             obj.amplitudes = amplitudes/1000;
             obj.amp_scalar__prop_to_disp = 1000;
         otherwise

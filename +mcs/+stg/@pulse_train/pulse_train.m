@@ -3,27 +3,63 @@ classdef pulse_train < matlab.mixin.Copyable
     %   Class:
     %   mcs.stg.pulse_train
     %
+    %   This holds onto a specification of a stimulus; essentially
+    %   amplitudes and durations of those amplitudes.
+    %
     %   Constructors
     %   ------------
     %   mcs.stg.pulse_train.fixed_rate
     %   mcs.stg.pulse_train.fromTimes
     %   mcs.stg.pulse_train.fromAmpDurationArrays
     %
-    %   This holds onto a specification of a stimulus; essentially
-    %   amplitudes and durations of those amplitudes.
+    %   Optional Inputs
+    %   ---------------
+    %
+    %   The following can be entered as property value pairs after all
+    %   required arguments. 
+    %
+    %   round_options : default mcs.stg.rounding_options
+    %   amp_units : default 'uA'
+    %       This is ignored if a stimulus waveform is specified.
+    %       - 'mA'
+    %       - 'uA'
+    %       - 'nA'
+    %       - 'V'
+    %       - 'mV'
+    %       - 'uV'
+    %   dur_units : default 's'
+    %       This is NOT ignored when a stimulus waveform is specified.
+    %       - 's'
+    %       - 'ms'
+    %       - 'us'
+    %   min_time_dt : default 20 us (For MCS stimulators)
+    %       This is the minimum realizable time step by the hardware
+    %       you are using. For stimulators where you specify the
+    %       sampling rate, this should be 1/fs. MUST be in seconds
+    %   waveform : default 1 amp_unit, 100 us, biphasic
+    %       This is the waveform that gets replicated.
+    %   
     %
     %   See Also
     %   --------
     %   mcs.stg.waveform
+    %   mcs.stg.sdk.cstg200x_download>sentDataToDevice
     %
     %   Examples
     %   -----------------------------
+    %   % 1) 500 uA stimulus at 40 Hz using default waveform (biphasic)
     %   pt = 500*mcs.stg.pulse_train.fixed_rate(40);
     %
-    %   %This is not yet fully implemented
+    %   % 2) 
+    %   times = 1:10 + 0.5*rand(1,10);
     %   pt = mcs.stg.pulse_train.fromTimes(times,varargin)
+    %
+    %   Test Code
+    %   ---------
+    %   mcs.stg.test__pulse_train
     
     properties (Constant)
+        d0 = '---- Constants ----'
         CURRENT_UNITS = 'uA'
         VOLTAGE_UNITS = 'mV'
         TIME_UNITS = 's'
@@ -36,7 +72,8 @@ classdef pulse_train < matlab.mixin.Copyable
         %dt - time between samples
         %The minimum time allowed for a dt value. Internally the signals
         %are not sampled, but this allows us to add checks for values that
-        %are not valid given this dt specification.
+        %are not valid given this dt specification. This should be
+        %specified at construction time
         
         output_type  %'voltage' or 'current'
         %This is not used much internally, except for plotting. This was
@@ -59,33 +96,34 @@ classdef pulse_train < matlab.mixin.Copyable
         stop_times
         total_duration_s
         
-        round_dt
-        throw_rounding_dt_error
+        is_current = false
+        is_voltage = false
     end
     
     properties (Dependent)
         n_samples
-        %# of amplitude/durations pairs
+        %# of amplitude/durations pairs, this is largely for programming 
+        %against in code
         
-        net_charge
-        %JAH TODO: Units unclear, plus name is incorrect
-        %for voltage control
-        %The total charge in the pulse-train.
+        net__amp_x_time %This is simply a sum of duration * amplitudes
     end
     
     methods
         function value = get.n_samples(obj)
             value = length(obj.durations);
         end
-        function value = get.net_charge(obj)
+        function value = get.net__amp_x_time(obj)
             value = sum(obj.durations.*obj.amplitudes);
         end
     end
     
     properties
-        d2 = '---- read/write properties ----'
+        d2 = '------- read/write properties -------'
         user_summary %This is optional and can be used to keep a
         %user-defined summary along with the pulse train.
+        round_options
+        amplitude_display_units
+        duration_display_units
     end
 
     %---------------    Constructors    --------------------
@@ -95,47 +133,57 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   pt = mcs.stg.pulse_train.fromAmpDurationArrays(amplitudes,durations,varargin)
             %
+            %   This essentially allows creation of the object from 
+            %   scratch, as the object only really holds pairs of
+            %   amplitudes and durations
+            %
             %   Inputs
             %   ------
             %   amplitudes : [uA] or [mV]
-            %       Array of stimulus amplitudes
+            %       Array of stimulus amplitudes.
             %   durations : [s]
             %       Array of durations of each stimulus amplitude.
             %
-            %   Optional Inputs (at end as key/value pairs)
-            %   --------------------------------------------
-            %   output_type : default 'current'
-            %       - 'current'
-            %       - 'voltage'
-            %   min_time_dt : default mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT
+            %   Optional Inputs
+            %   ---------------
+            %   See "help mcs.stg.pulse_train"
             %
             %   Example
             %   -------
-            %   %#1
-            %   amplitudes = [-0.5 1 -0.5 0];
-            %   durations_ms = [0.1 0.1 0.1 (10-0.3)];
+            %   % 1) Note default units are (s) and (uA)
+            %   amplitudes_ua = [-0.5  1   -0.5   0];
+            %   durations_ms  = [0.1   0.1  0.1  (10-0.3)];
             %   durations_s = durations_ms/1000;
             %   pt = mcs.stg.pulse_train.fromAmpDurationArrays(...
-            %           amplitudes,durations_s,'output_type','voltage');
+            %           amplitudes_ua,durations_s);
             %   pt2 = pt.repeat(100);
             %   plot(pt2)
-            
-            in.throw_dt_error = true;
-            in.round_dt = true;
-            in.output_type = 'current';
-            in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
-            in = mcs.sl.in.processVarargin(in,varargin);
+            %
+            %   % 2) Let's force our units
+            %   amplitudes_v = [-1 1 0];
+            %   durations_ms = [0.1 0.1 2];
+            %   pt = mcs.stg.pulse_train.fromAmpDurationArrays(...
+            %           amplitudes_v,durations_ms,'amp_units','v','dur_units','ms');
+            %   plot(pt)
             
             obj = mcs.stg.pulse_train;
-            obj.min_time_dt = in.min_time_dt;
-            obj.output_type = in.output_type;
+            is_constructor = true;
+            in = h__getDefaultOptions(obj,is_constructor);
+            in = h__processOptions(obj,in,varargin,is_constructor);
+            
+            if length(amps) ~= length(durations)
+                error('# of amplitudes and durations should be the same, observed %d and %d',...
+                    length(amps),length(durations));
+            end
+
+            durations = h__scaleDurToDefaultUnits(durations,in);
+            amps = h__scaleAmpToDefaultUnits(obj,amps,in);
+            
             obj.amplitudes = amps(:)';
             obj.durations = durations(:)';
             
-            
-            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
+            h__roundDurations(obj,in)
             h__initTimes(obj);
-            
         end
         function obj = fromTimes(times,varargin)
             %x Create stimulus train from pulses at specified times
@@ -147,47 +195,35 @@ classdef pulse_train < matlab.mixin.Copyable
             %   Inputs
             %   ------
             %   times : [s]
-            %       Times to stimulate. 
+            %       Times at which to generate a stimulus pulse.
             %
             %   Optional Inputs
             %   ---------------
-            %   output_type : default 'current'
-            %   min_time_dt : default mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT
-            %   amp_units : default 'uA'
-            %       This is ignored if a stimulus waveform is specified.
-            %       - 'mA'
-            %       - 'uA'
-            %       - 'nA'
-            %       - 'V'
-            %       - 'mV'
-            %       - 'uV'
-            %   waveform : default []
-            %       See mcs.stg.waveform for more examples.
+            %   See "help mcs.stg.pulse_train"
             %
             %   Examples
             %   ----------
-            %   %#1
-            %   isi = randi(50,1,1000)/1000; %/1000 for ms to s conversion
-            %   t = cumsum(isi);
-            %   pt = mcs.stg.pulse_train.fromTimes(t);
+            %   % 1) from random ISIs 
+            %   isi_ms = randi(50,1,20);
+            %   t_ms = cumsum(isi_ms);
+            %   pt = mcs.stg.pulse_train.fromTimes(t_ms,'dur_units','ms');
+            %   plot(pt)
             %
-            %   %#2
-            %   isi = (1:200)./1000;
-            %   t = cumsum(isi);
-            %   pt = mcs.stg.pulse_train.fromTimes(t);
+            %   % 2) increasing ISIs with stimuli in Volts
+            %   isi_ms = (1:20);
+            %   t_ms = cumsum(isi_ms);
+            %   pt = mcs.stg.pulse_train.fromTimes(t_ms,'dur_units','ms','amp_units','v');
+            %   plot(pt)
             
-         	in.throw_dt_error = true;
-            in.round_dt = true;
-            in.output_type = 'current';
-            in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
-            in.amp_units = 'uA';
-            in.waveform = []; %mcs.stg.waveform
-            in = mcs.sl.in.processVarargin(in,varargin);
-            
+            obj = mcs.stg.pulse_train;
+            is_constructor = true;
+            in = h__getDefaultOptions(obj,is_constructor);
+            in = h__processOptions(obj,in,varargin,is_constructor);
+                     
             if isempty(in.waveform)
-                waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
+                waveform = h__getDefaultWaveform(in);
             else
-                waveform = in.waveform;
+                waveform = in.waveform;   
             end
             
             waveform_durations = waveform.durations_s;
@@ -195,18 +231,26 @@ classdef pulse_train < matlab.mixin.Copyable
             
             %ISI setup
             %--------------------------------------
-            isis = diff(times);
+            isi_values = diff(times);
+            if any(times < 0)
+               error('times must all be >= 0') 
+            end
+            if any(isi_values <= 0)
+               error('times must in ascending order') 
+            end
+            
             total_waveform_duration = sum(waveform_durations);
-            isi_minus_waveform = isis-total_waveform_duration;
+            isi_minus_waveform = isi_values-total_waveform_duration;
             
             if any(isi_minus_waveform < 0)
                error('Insufficient time between pulses given waveform duration') 
             end
 
-            n_samples_per_pulse = length(waveform_amplitudes);
-            %Add 1 for the 0 between pulses
-            n_samples_per_isi = n_samples_per_pulse+1;
-            n_samples_total = n_samples_per_isi*length(times);
+            
+            %Add 1 for the 0 amplitude between pulses
+            n_waveform_samples = length(waveform_amplitudes);
+            n_samples_per_pulse = n_waveform_samples + 1;
+            n_samples_total = n_samples_per_pulse*length(times);
             
             %----|----|----| <= std example => 3 pulses, 3 ISIs
             %|---|--|  <= start with pulse example => 3 pulses, 2 ISIs
@@ -229,33 +273,41 @@ classdef pulse_train < matlab.mixin.Copyable
             
             %We're populating like this
             %
-            %   0000 <= populated above if present
-            %   ----|----|--|-------|
-            %       11111
-            %            222
+            %   '|' is a pulse
+            %   ---- is the zeros
+            %
+            %
+            %   0000 <= populated above if first pulse not at 0
+            %   ----|----|--|-------|       
+            %       11111             <= i.e. first index consists
+            %            222           of 1st pulse and zero afterwards
             %               33333333
             %                       4 <= add on at the end
             
             for i = 1:(length(times)-1)
                 start_I = end_I+1;
-                end_I = end_I + n_samples_per_pulse;
+                end_I = end_I + n_waveform_samples;
+                %Add on the waveform
                 durations(start_I:end_I) = waveform_durations;
                 amplitudes(start_I:end_I) = waveform_amplitudes;
                 end_I = end_I + 1;
+                %Add on the time between pulses
+                %amplitude of zero comes from initialization with zeros()
                 durations(end_I) = isi_minus_waveform(i);
             end
             
+            %Add on pulse at the end
             start_I = end_I+1;
-            end_I = end_I + n_samples_per_pulse;
+            end_I = end_I + n_waveform_samples;
          	durations(start_I:end_I) = waveform_durations;
             amplitudes(start_I:end_I) = waveform_amplitudes;
             
-           	obj = mcs.stg.pulse_train;
-            obj.min_time_dt = in.min_time_dt;
-            obj.output_type = waveform.output_type;
+            durations = h__scaleDurToDefaultUnits(durations,in);
+            %amplitudes = h__scaleAmpToDefaultUnits(obj,amplitudes,in);
+            
             obj.amplitudes = amplitudes;
             obj.durations = durations;
-            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
+            h__roundDurations(obj,in)
             h__initTimes(obj);
         end
         function obj = fixed_rate(rate,varargin)
@@ -263,23 +315,20 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   obj = mcs.stg.pulse_train.fixed_rate(rate,varargin)
             %
+            %   Note, the default behavior is only to generate a single
+            %   pulse that when repeated creates a train at the specified 
+            %   rate.
+            %
             %   Inputs
             %   ------
             %   rate :
-            %       Frequency of pulses, e.g. 20 Hz. The rate is rounded to
-            %       the nearest multiple of 'min_time_dt'.
+            %       Frequency of pulses, e.g. 20 Hz. 
+            %       IMPORTANT: The rate is rounded to the nearest 
+            %       multiple of 'min_time_dt'.
             %
             %   Optional Inputs
             %   ---------------
-            %   min_time_dt : default = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT
-            %       
-            %   amp_units : string
-            %       - 'mA'
-            %       - 'uA' (default)
-            %       - 'nA'
-            %       - 'mV'
-            %   waveform : default 1 amp_unit, 100 us, biphasic
-            %       This is the waveform that gets replicated.
+            %   See "help mcs.stg.pulse_train" AND:
             %
             %   n_pulses : (default 1)
             %       # of pulses in a train. Note with only one pulse
@@ -354,11 +403,9 @@ classdef pulse_train < matlab.mixin.Copyable
             
             ERR_ID = 'mcs:stg:pulse_train:fixed_rate';
             
-          	in.throw_dt_error = true;
-            in.round_dt = true;
-            in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
-            in.amp_units = 'uA';
-            in.waveform = []; %mcs.stg.waveform
+            obj = mcs.stg.pulse_train;
+            is_constructor = true;
+            in = h__getDefaultOptions(obj,is_constructor);
             %-----------------------------
             in.n_pulses = [];
             in.pulses_duration = [];
@@ -367,22 +414,21 @@ classdef pulse_train < matlab.mixin.Copyable
             in.n_trains = [];
             in.trains_duration = [];
             %-----------------------------
-            in = mcs.sl.in.processVarargin(in,varargin);
+            in = h__processOptions(obj,in,varargin,is_constructor);
             
             if isempty(in.waveform)
-                %1 uA, 0.1 ms
-                waveform = mcs.stg.waveform.biphasic(1,0.1,'amp_units',in.amp_units);
+                waveform = h__getDefaultWaveform(in);
             else
-                waveform = in.waveform;
+                waveform = in.waveform;   
             end
             
             %Creation of a train
             %--------------------------------------------------------------
             dt = 1/rate;
+            dt = in.round_options.getDT(dt,obj.min_time_dt);
             
-            dt = round(dt./in.min_time_dt)*in.min_time_dt;
             if dt == 0
-                error('Specified rate was too high based on ''min_time_dt'' specification')
+                error(ERR_ID,'Specified rate was too high based on ''min_time_dt'' specification')
             end
             
             between_pulse_dt = dt - waveform.total_duration_s;
@@ -398,12 +444,9 @@ classdef pulse_train < matlab.mixin.Copyable
                 n_pulses = 1;
             end
             
-            obj = mcs.stg.pulse_train;
-            obj.min_time_dt = in.min_time_dt;
-            obj.output_type = waveform.output_type;
             obj.amplitudes = [waveform.amplitudes 0];
             obj.durations = [waveform.durations_s between_pulse_dt];
-            h__roundDurations(obj,in.round_dt,in.throw_dt_error)
+            h__roundDurations(obj,in)
             h__initTimes(obj);
             if n_pulses > 1
                 obj = obj.repeat(n_pulses);
@@ -426,6 +469,8 @@ classdef pulse_train < matlab.mixin.Copyable
                 obj.dropLastValue();
                 
                 train_dt = 1/in.train_rate;
+                train_dt = in.round_options.getDT(train_dt,obj.min_time_dt);
+
                 between_train_dt = train_dt - obj.total_duration_s;
                 if between_train_dt < 0
                     error(ERR_ID,'Train rate is too high given the waveform duration')
@@ -448,6 +493,26 @@ classdef pulse_train < matlab.mixin.Copyable
         end
     end
     
+    methods 
+        function obj = pulse_train(varargin)
+            %x default constructor
+            %
+            %   Note that because we don't support changing the minimum 
+            %   dt after object creation we have to have it as an option
+            %   here for the case in which we start with an empty pulse
+            %   train.
+            %
+            %   mcs.stg.pulse_train(varargin)
+            %
+            %
+            %   TODO: Document this ...
+            
+            is_constructor = true;
+            in = h__getDefaultOptions(obj,is_constructor);
+            in = h__processOptions(obj,in,varargin,is_constructor);
+        end
+    end
+    
     methods
         function varargout = leftExpandDurations(obj,t,varargin)
             %x Expand the duration of specified points
@@ -458,20 +523,21 @@ classdef pulse_train < matlab.mixin.Copyable
             %   total time remains the same, with the exception of the end
             %   value.
             %
-            %       ----    Initial
-            %   ----    --  
+            %   high       ----    Initial
+            %   zero   ----    --  
             %
-            %     ------    Left-expanded duration
-            %   --      --
+            %   high     ------     Left-expanded duration
+            %   zero   --      --
             %
             %   By default any non-zero amplitudes are left expanded.
             %
             %   Inputs
             %   ------
             %   t : scalar
-            %       Time to expand the specified duration segment. A
-            %       positive value expands whereas a negative value
-            %       will shorten the segment.
+            %       Time to expand the specified duration segment.
+            %       + value => expands duration
+            %       - value => shortens duration 
+            %
             %
             %   Optional Inputs
             %   ---------------
@@ -482,38 +548,63 @@ classdef pulse_train < matlab.mixin.Copyable
             %       If true the total time will increase. This will
             %       shift the entire signal back in time if the first
             %       value in the mask is true. This would not be desirable
-            %       if you're trying to sync 2 signals
+            %       if you're trying to sync 2 signals.
             %
             %   Examples
             %   --------
-            %   %#1 --- Expand, allowing overall time growth
+            %   % 1) --- Expand, allowing overall time growth
             %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
-            %   dt = 50/1e6; %50 us
+            %   delta_t = 60; %60 us
             %   %Only expand positive values
-            %   pt2 = pt.leftExpandDurations(dt,'mask',pt.amplitudes > 0,'allow_expanding_time',true);
+            %   pt2 = pt.leftExpandDurations(delta_t,'mask',pt.amplitudes > 0,...
+            %               'allow_expanding_time',true,'dur_units','us');
             %   plot(pt)
             %   hold on
             %   plot(pt2)
             %   hold off
-            %   %TODO: Zooming in by default would help
+            %   %https://www.mathworks.com/matlabcentral/answers/23318-reset-to-original-view-with-zoom
+            %   resetplotview(gca,'InitializeCurrentView');
+            %   set(gca,'xlim',[-1e-4 4e-4])
             %   title('This left shift looks wrong because we extended time for the first pulse')
+            %   legend({'original','new'})
             %
-            %   %#2 --- Prepend 0 to avoid the time shift
+            %   % 2) --- Prepend 0 to avoid the time shift
             %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
             %   %Add 0.5 seconds with no amplitude
             %   pt.prependValues(0,0.5);
-            %   dt = 50/1e6; %50 us
-            %   pt2 = pt.leftExpandDurations(dt,'mask',pt.amplitudes > 0);
+            %   delta_t = 60/1e6; %60 us, convert to s (avoids 'dur_units' input)
+            %   pt2 = pt.leftExpandDurations(delta_t,'mask',pt.amplitudes > 0);
             %   plot(pt)
             %   hold on
             %   plot(pt2)
             %   hold off
+            %   resetplotview(gca,'InitializeCurrentView');
+            %   set(gca,'xlim',0.5 + [-1e-4 4e-4])
             %   title('This left shift looks good, because we expand into the leading 0 for the first pulse')
+            %   legend({'original','new'})
+            %
+            %   % 3) --- Left shift by a bad resolution - throws error
+            %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
+            %   pt.prependValues(0,0.5);
+            %   delta_t = 25/1e6; %25 us => error, timestep is 20 us
+            %   pt2 = pt.leftExpandDurations(delta_t,'mask',pt.amplitudes > 0);
+            %
+            %
+            %   % 4) --- Try to left expand for pulse starting at 0 - error
+            %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
+            %   delta_t = 40; 
+            %   pt2 = pt.leftExpandDurations(delta_t,'dur_units','us');   
             
+            is_constructor = false;
+            in = h__getDefaultOptions(obj,is_constructor);
             in.mask = -1;
             in.allow_expanding_time = false;
-            in = mcs.sl.in.processVarargin(in,varargin);
-            
+            in = h__processOptions(obj,in,varargin,is_constructor);
+
+            if length(t) ~= 1
+                error('Currently # of expansion durations must be 1')
+            end
+                        
             if nargout
                 obj = copy(obj);
             end
@@ -538,6 +629,8 @@ classdef pulse_train < matlab.mixin.Copyable
                 end
             end
             
+            t = h__scaleDurToDefaultUnits(t,in);
+            
             I = find(in.mask);
             if t > 0
                 prev_durations = obj.durations(I-1);
@@ -545,7 +638,6 @@ classdef pulse_train < matlab.mixin.Copyable
                     error('Unable to expand past multiple values, one of the preceeding durations is too short')
                 end
             else 
-                %TODO: Test this
                 cur_durations = obj.durations(I);
                 if any(cur_durations < abs(t))
                     error('Unable to shorten current duration beyond having a 0 duration')
@@ -556,7 +648,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %----------------------------------------------------
             for i = 1:length(I)
                 cur_I = I(i);
-                %Note the checks above ensure
+                %Note the checks above ensure that we aren't
+                %causing negative durations anywhere ...
                 durations_local(cur_I) = durations_local(cur_I) + t;
                 durations_local(cur_I-1) = durations_local(cur_I-1) - t;
             end
@@ -566,6 +659,7 @@ classdef pulse_train < matlab.mixin.Copyable
             end
             
             obj.durations = durations_local;
+            h__roundDurations(obj,in)
             h__initTimes(obj)
             
             if nargout
@@ -595,6 +689,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %   ------
             %   t : scalar
             %       Time to expand the duration ...
+            %       + values - expands durations
+            %       - values - shortens durations
             %
             %   Optional Inputs
             %   ---------------
@@ -608,9 +704,9 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   Examples
             %   --------
-            %   %#1
-            %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
-            %   dt = 50/1e6; %50 us
+            %   % 1) right expand for negative parts of signal
+            %   pt = mcs.stg.pulse_train.fixed_rate(1000,'n_pulses',2);
+            %   dt = 60/1e6; %50 us
             %   %Only expand negative amplitude values
             %   pt2 = pt.rightExpandDurations(dt,'mask',pt.amplitudes < 0);
             %   plot(pt)
@@ -619,12 +715,18 @@ classdef pulse_train < matlab.mixin.Copyable
             %   hold off
             %   legend('original','right expanded')
             
+            is_constructor = false;
+            in = h__getDefaultOptions(obj,is_constructor);
             in.mask = -1;
             in.allow_expanding_time = true;
-            in = mcs.sl.in.processVarargin(in,varargin);
+            in = h__processOptions(obj,in,varargin,is_constructor);
             
             if nargout
                 obj = copy(obj);
+            end
+            
+            if length(t) ~= 1
+                error('Currently # of expansion durations must be 1')
             end
             
             durations_local = obj.durations;
@@ -647,6 +749,8 @@ classdef pulse_train < matlab.mixin.Copyable
                 end
             end
             
+            t = h__scaleDurToDefaultUnits(t,in);
+
             I = find(in.mask);
             if t > 0
                 next_durations = obj.durations(I+1);
@@ -665,7 +769,8 @@ classdef pulse_train < matlab.mixin.Copyable
             %----------------------------------------------------
             for i = 1:length(I)
                 cur_I = I(i);
-                %Note the checks above ensure
+                %Note the checks above ensure that we aren't causing
+                %negative durations anywhere
                 durations_local(cur_I) = durations_local(cur_I) + t;
                 durations_local(cur_I+1) = durations_local(cur_I+1) - t;
             end
@@ -675,12 +780,12 @@ classdef pulse_train < matlab.mixin.Copyable
             end
             
             obj.durations = durations_local;
+            h__roundDurations(obj,in)
             h__initTimes(obj)
             
             if nargout
                 varargout{1} = obj;
             end
-            
         end
         function new_obj = createSyncSignal(obj,varargin)
             %x Creates signal for sync or blanking
@@ -698,9 +803,6 @@ classdef pulse_train < matlab.mixin.Copyable
             %       signal (from taking absolute value) are merged into one
             %       duration segment. This can be useful for later
             %       duration expansion.
-            %   output_type : default 'voltage'
-            %       - 'current'
-            %       - 'voltage'
             %   sync_amp : default 1
             %       By default the non-zero amplitude is 1. This can be
             %       changed here or it can be modified afterwards by
@@ -719,7 +821,6 @@ classdef pulse_train < matlab.mixin.Copyable
             %       
             
             in.simplify = true;
-            in.output_type = 'voltage';
             in.sync_amp = 1;
             in = mcs.sl.in.processVarargin(in,varargin);
             %copy, then take absolute value and simplify
@@ -737,11 +838,13 @@ classdef pulse_train < matlab.mixin.Copyable
         function varargout = addLeadingZeroTime(obj,t)
             %x Adds stim at 0 amplitude at beginning of pattern
             %
-            %   %#1 In place modification:
-            %       pt.addLeadingZeroTime(t)
+            %   Calling Forms
+            %   -------------
+            %   % 1) In place modification:
+            %   pt.addLeadingZeroTime(t)
             %
-            %   %#2 Modification of copy
-            %       pt2 = pt.addLeadingZeroTime(t)
+            %   % 2) Modification of copy
+            %   pt2 = pt.addLeadingZeroTime(t)
             %
             %   Inputs
             %   ------
@@ -803,10 +906,12 @@ classdef pulse_train < matlab.mixin.Copyable
         function varargout = appendValues(obj,amps,durations)
             %x Add amplitude/duration pairs to the end of the train
             %
-            %   %#1 Modify in place
+            %   Calling Forms
+            %   -------------
+            %   % 1) Modify in place
             %   pt.appendValues(amplitudes,durations)
             %
-            %   %#2 Modify a copy
+            %   % 2) Modify a copy
             %   pt2 = pt1.appendValues(amplitudes,durations)
             %
             %   Inputs
@@ -818,7 +923,7 @@ classdef pulse_train < matlab.mixin.Copyable
             %   -------
             %   pt1 = mcs.stg.pulse_train.fixed_rate(40);
             %   amplitudes = [-1 1 0];
-            %   durations = [1 1 100]/1000;
+            %   durations = [1 1 100]/1000; %ms to s
             %   pt2 = pt1.appendValues(amplitudes,durations);
             %   plot(pt2)
             %
@@ -842,16 +947,18 @@ classdef pulse_train < matlab.mixin.Copyable
             %
             %   Calling Forms
             %   -------------
-            %   %#1 Modify in-place
+            %   % 1) Modify in-place
             %   pt.simplify();
             %
-            %   %#2 Modify a copy
+            %   % 2) Modify a copy
             %   pt2 = pt1.simplify();
             %
             %   Example
             %   -------
             %   pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',10);
             %   pt2 = abs(pt);
+            %   %Note, taking absolute value on biphasic results in
+            %   %redundancies in amplitude spec
             %   pt3 = pt2.simplify();
             %   plot(pt2)
             %   hold on
@@ -914,9 +1021,9 @@ classdef pulse_train < matlab.mixin.Copyable
                 varargout{1} = obj;
             end
         end
-        %TODO: Create getSampledArrays function which takes in multiple
+        %TODO: Create getSampledArrays (NOTE: plural) function which takes in multiple
         %pulse train objects
-        %[amplitudes,dt,time_array] = getSampledArrays(obj1,other_objects,dt,varargin)
+        %[amplitudes,dt,time_array] = getSampledArrays(obj1,other_objects,*dt,varargin)
         %
         %   other_objects - either a cell array or regular array
         %
@@ -1164,7 +1271,7 @@ classdef pulse_train < matlab.mixin.Copyable
                 varargout{1} = obj;
             end
         end
-        function varargout = addValue(obj,amplitude,duration)
+        function varargout = addValue(obj,amplitude,duration,varargin)
             %x Adds single amplitude/duration value at the end of the train
             %
             %   Calling Forms
@@ -1187,6 +1294,11 @@ classdef pulse_train < matlab.mixin.Copyable
             %   See Also
             %   --------
             
+            is_constructor = false;
+            in = h__getDefaultOptions(obj,is_constructor);
+            in = h__processOptions(obj,in,varargin,is_constructor);
+             
+            
             if nargout
                 obj = copy(obj);
             end
@@ -1197,7 +1309,7 @@ classdef pulse_train < matlab.mixin.Copyable
             
             obj.amplitudes = [obj.amplitudes amplitude];
             obj.durations = [obj.durations duration];
-            h__roundDurations(obj);
+            h__roundDurations(obj,in);
             obj.start_times = [obj.start_times obj.stop_times(end)];
             obj.total_duration_s = obj.total_duration_s + obj.durations(end);
             obj.stop_times = [obj.stop_times obj.total_duration_s];
@@ -1231,6 +1343,11 @@ classdef pulse_train < matlab.mixin.Copyable
             %x Plot the stimuli
             %
             %   h = plot(obj)
+            
+            in.dur_units = 's';
+            in = sl.in.processVarargin(in,varargin);
+            
+            
             
             %This is to create a sample and hold look
             temp = [obj.start_times(:) obj.stop_times(:)]';
@@ -1289,31 +1406,132 @@ obj.total_duration_s = csum(end);
 
 end
 
-function h__roundDurations(obj,round_flag,throw_error)
+function h__roundDurations(obj,in)
+%
+%
+%   At this point obj.durations has already been set.
 
-    
-    if nargin > 1
-        %This should be from the constructors
-        obj.round_dt = round_flag;
-        obj.throw_rounding_dt_error = throw_error;
-    else
-        throw_error = obj.throw_rounding_dt_error;
-        round_flag = obj.round_dt;
+obj.durations = in.round_options.getRoundedDurations(obj.durations,obj.amplitudes,obj.min_time_dt);
+
+end
+
+function in = h__getDefaultOptions(obj,is_constructor)
+in = struct();
+%By using the constructor values we have 1 place where
+%the defaults are set
+if is_constructor
+    in.round_options = mcs.stg.rounding_options();
+else
+    in.round_options = copy(obj.round_options);
+end
+in.amp_units = mcs.stg.pulse_train.CURRENT_UNITS;
+in.dur_units = mcs.stg.pulse_train.TIME_UNITS;
+in.waveform = [];
+
+if is_constructor
+    in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
+end
+
+end
+
+function in = h__processOptions(obj,in,var,is_constructor)
+%TODO: We need to handle waveforms as well
+in = mcs.sl.in.processVarargin(in,var);
+            
+%Note this must preceed the scaling
+if is_constructor
+    if ~isempty(in.waveform)
+        in.amp_units = in.waveform.user_amp_units;
     end
+    
+    h__populateUnitsInfo(obj,in.amp_units,in.dur_units)
+    obj.round_options = in.round_options;
+    obj.min_time_dt = in.min_time_dt;
+end
 
-    %TODO: implement throw_error flag
-    %If the differene is large, like > 0.1 dt, throw error
-    %i.e. if we specify we want a 50 us pulse when our resolution is 20 us
-    %then indicate this in a sensible way ...
-    %
-    %
-    if round_flag
-        obj.durations = round(obj.durations./obj.min_time_dt)*obj.min_time_dt;
+end
+
+function h__populateUnitsInfo(obj,constructor_amp_units,constructor_time_units)
+
+    switch lower(constructor_amp_units)
+        case {'v','mv','uv'}
+            obj.is_voltage = true;
+        case {'ma','ua','na'}
+            obj.is_current = true;
+        otherwise
+            error('Unrecognized units: %s',amp_units)  
+    end
+    
+    obj.amplitude_display_units = constructor_amp_units;
+    obj.duration_display_units = constructor_time_units;
+end
+
+function out = h__scaleAmpToDefaultUnits(obj,amps,in)
+    if ~isempty(in.waveform)
+        out = amps;
+        return
+    end
+    
+    amp_units = in.amp_units;
+    switch lower(amp_units)
+        case 'v'
+            out = 1000*amps;
+        case 'mv'
+            out = amps;
+        case 'uv'
+            out = amps/1000;
+        case 'ma'
+            out = 1000*amps;
+        case 'ua'
+            out = amps;
+        case 'na'
+            out = amps/1000;
+        otherwise
+            error('Unrecognized amplitude units: %s',amp_units)  
+    end
+    
+    if any(amp_units == 'v') && obj.is_current
+        error('User specified input in voltage units, but object contains current units')
+    elseif any(amp_units == 'a') && obj.is_voltage
+        error('User specified input in current units, but object contains voltage units')        
+    end
+end
+function out = h__scaleDurToDefaultUnits(durations,in)
+    input_units = in.dur_units;
+    switch lower(input_units)
+        case 's'
+            out = durations;
+        case 'ms'
+            out = durations/1e3;
+        case 'us'
+            out = durations/1e6;
+        otherwise
+            error('Unrecognized time units: %s',input_units)
     end
 end
 
+
+function waveform = h__getDefaultWaveform(in)
+    %just in case we want to change how we do this
+    %it is in one place ...
+    waveform = mcs.stg.waveform.biphasic(1,0.1,...
+        'amp_units',in.amp_units,...
+        'duration_units','ms');
+end
+
 function dt = h__getDTforDurations(durations)
-%Round to ns resolution ...
+%
+%   dt = h__getDTforDurations(durations)
+%
+%   This computes a dt that satisfies the specified durations. It currently
+%   limits the resolution to a minimum of 1 ns.
+%
+%   For example if we have durations of [40,100,150] (us)
+%   then the maximum possible dt which can hit those times is 10 us
+%
+%   i.e. 10 is the greatest common denominator for those values
+
+%Round to ns resolution ... TODO: Expose this to the user somehow
 temp_durations = round(1e9*durations);
 
 %Not sure if this is the quickest approach ...
