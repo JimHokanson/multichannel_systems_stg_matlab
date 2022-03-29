@@ -1,28 +1,33 @@
 %e001_trigger_tests
-
-%Set 10 Hz on chan 1 and 40 Hz on chan 3
-%1) Start them at the same time
-%2) Set them on their own triggers
+%
+%
+%   JAH May 2019: This needs some work ...
 
 %Note, trigger settings and everything persists across code reset ...
-%How to flush everything???
+%TODO: How to flush everything???
 
-%This is the default ...
-%For 4 channels ...
-%Ideally this would be padded in some way
-%to avoid the zeros ...
-%Basically this says trigger 1 should activate all 4 channels
-map = mcs.utils.bitmask({[1 2 3 4] 0 0 0});
+%1) GOAL: Stimulation on 2 channels at starting at the same time
+%--------------------------------------------------------------------------
+%- 10 Hz on channel 1
+%- 40 Hz on channel 3
 
-s = mcs.getStimulator();
+%- This means all 4 channels should be activated by the first trigger.
+%- Note I believe this is the default on startup.
+chans = cell(1,4); %4 triggers available
+chans{1} = 1:4; %trigger 1 starts all 4 channels
+map = mcs.utils.bitmask(chans);
 
-amplitude = 1000; %uA
 
+s = mcs.getStimulator(); %s : mcs.stg.sdk.cstg200x_download
+
+amplitude = 1000; %uA (default unit)
 pt1 = 1000*mcs.getFixedRatePattern(10);
 pt2 = 1000*mcs.getFixedRatePattern(40);
 
-%This apparently sends  the first pattern to all channels
-%which is not what I expeted ... Is this a bug????
+%JAH May 2019: Verify that below works and update documentation ...
+
+%This apparently sends the first pattern to all channels
+%which is not what I expected ... Is this a bug????
 %
 %When run I see pt1 on channels 1 & 3....
 s.setupTrigger('channel_maps',map,'syncout_maps',map)
@@ -32,16 +37,25 @@ s.sentDataToDevice([1 3],{pt1 pt2});
 tr = s.trigger_settings;
 disp(tr)
 
+%TODO: Indicate how this impacts the maps
 s.setupTrigger('repeat_all',0);
 
 %Stimulate with the current trigger setup
-%---------------------------------------------
-%Not what I expected ... - see above note ...
 s.startStim('triggers',1);
 %Stop all triggers
 s.stopStim();
 
+%2) Stimulate on each channel when its trigger is specified
+%------------------------------------------------------------
+%- This example 
+%
 %Change the trigger setup ...
+s = mcs.getStimulator();
+
+amplitude = 1000; %uA (default unit)
+pt1 = 1000*mcs.getFixedRatePattern(10);
+pt2 = 1000*mcs.getFixedRatePattern(40);
+
 s.setupTrigger('linearize',true,'repeat_all',0);
 s.startStim('triggers',1);
 pause(0.5)
