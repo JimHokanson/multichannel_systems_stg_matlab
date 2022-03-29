@@ -95,17 +95,14 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    Inputs
            %    ------
            %    channels_1b : 
-           %        Which channel or channels to send the data to
-           %    data : mcs.stg.pulse_train OR ...
+           %        Which channel or channels to send the data to.
+           %    data : mcs.stg.pulse_train
            %        Currently only a pulse train input is supported.
            %        For multiple channels a cell array should be used.
+           %        e.g. .sentDataToDevice([1 3],{pt1 pt3})
            %
            %    Optional Inputs
            %    ---------------
-           %    set_mem : default true
-           %        This should basically always be true unless you wanted
-           %        to append, then all memory management would need to be
-           %        done before uploading.
            %    mode : string
            %        - 'new' (default)
            %        - 'append' NYI - requires complicated memory management
@@ -156,11 +153,10 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            %    prepareAndSendData
            %    PrepareAndAppendData 
            
-           in.set_mem = true;
            in.mode = 'new';  
            in.use_sync = true;
            in.sync_mode = 'all_pulses';
-           in.verify_capacity = true;
+           in.verify_capacity = true; %NYI ...
            in = mcs.sl.in.processVarargin(in,varargin);
            
            %a - amplitude
@@ -185,15 +181,20 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            %Setup of raw outputs for hardware
            %----------------------------------------
-           raw_data = struct('id',num2cell(channels_1b),...
-               'a',[],'d',[],'type','','s',[],'sd',[]);
            %struct for sending to HW
-           %.a - amplitude
-           %.d - duration
-           %.s - sync amplitude
-           %.sd - sync duration
+           raw_data = struct(...
+               'id',num2cell(channels_1b),...
+               'a',[],... %amplitudes
+               'd',[],... %durations
+               'type','',...
+               's',[],... %sync_amplitude
+               'sd',[]);  %sync_durations
+           
+           %Grab stim and sync data
+           %---------------------------------
            for i = 1:n_channels
                cur_data = data{i};
+               cur_channel = channels_1b(i);
                [a,d] = cur_data.getStimValues();
                
                raw_data(i).a = a;
@@ -201,13 +202,18 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                
                if strcmp(cur_data.output_type,'voltage')
                    type = mcs.enum.stg_destination.voltage;
+                   obj.setVoltageMode(cur_channel);
                else
                    type = mcs.enum.stg_destination.current;
+                   obj.setCurrentMode(cur_channel);
                end
                
                raw_data(i).type = type;
                
                if in.use_sync
+                   
+                   %TODO: Pass this back to the pattern to process
+                   
                    %This could change depending on how we process sync ...
                    a(a ~= 0) = 1;
                    raw_data(i).s = a;
@@ -234,26 +240,29 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            %Memory setup 
            %------------------------------------------
-           if in.set_mem
-               %get current values, then override with what we are going
-               %to use
-               [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
-               for i = 1:n_channels
-                   cur_chan = channels_1b(i);
-                   wtf1 = c_stim.prepareData(raw_data(i));
+           %get current values, then override with what we are going
+           %to use
+           [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
+           for i = 1:n_channels
+               cur_chan = channels_1b(i);
+               wtf1 = c_stim.prepareData(raw_data(i));
+               len = wtf1.DeviceDataLength;
+               chan_capacity(cur_chan) = len;
+               if in.use_sync
+                   %mcs.stg.sdk.c_stimulus_function>prepareSyncData
+                   wtf1 = c_stim.prepareSyncData(raw_data(i));
                    len = wtf1.DeviceDataLength;
-                   chan_capacity(cur_chan) = len;
-                   if in.use_sync
-                       %mcs.stg.sdk.c_stimulus_function>prepareSyncData
-                       wtf1 = c_stim.prepareSyncData(raw_data(i));
-                       len = wtf1.DeviceDataLength;
-                       sync_capacity(cur_chan) = len;
-                   end
+                   sync_capacity(cur_chan) = len;
+               else
+                   %TODO: Write test case for this ...
+                   %This should mean that if we switch to a stim only
+                   %condition the sync doesn't show up still
+                   sync_capacity(cur_chan) = 0;
                end
-               obj.setChannelAndSyncCapacity(chan_capacity,sync_capacity);
-           else
-              error('Not yet implemented') 
            end
+           %Note, this call below must be done simultaneously as 
+           %modification of one can impact the other
+           obj.setChannelAndSyncCapacity(chan_capacity,sync_capacity);
            
 
            %Upload stim to memory
@@ -275,9 +284,6 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                        end
                    otherwise
                        error('Unrecognized mode')
-               end
-               if ~in.use_sync
-                  %TODO: Need to make sure we clear sync memory ... 
                end
            end
 

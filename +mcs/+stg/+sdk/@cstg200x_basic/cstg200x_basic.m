@@ -133,10 +133,10 @@ classdef cstg200x_basic < handle
     
     methods
         function getAnalogRanges(obj)
-            
+            %NYI
         end
         function getAnalogResolution(obj)
-            
+            %NYI
         end
         function startStim(obj,varargin)
             %x Start the program
@@ -172,6 +172,7 @@ classdef cstg200x_basic < handle
             
             trigger_map = mcs.utils.bitmask({in.triggers});
             
+            %TODO: Document what this is looking for ...
             obj.h.SendStart(uint32(trigger_map.values));
         end
         function stopStim(obj,varargin)
@@ -210,8 +211,17 @@ classdef cstg200x_basic < handle
             %x Enable current-controlled stimulation on a set of channels
             %
             %   setCurrentMode(obj, *channels_1b)
+            %
+            %   Examples
+            %   --------
+            %   %1) Sets all channels to current mode ...
+            %   d.setCurrentMode()
+            %
+            %   %2) Sets channels 1 and 2 to current mode
+            %   d.setCurrentMode(1:2)
             
-            %             n_chans = obj.n_analog_channels;
+            
+            % n_chans = obj.n_analog_channels;
             
             if nargin == 1
                 obj.h.SetCurrentMode();
@@ -223,13 +233,13 @@ classdef cstg200x_basic < handle
             
         end
         function setVoltageMode(obj,channels_1b)
-            %x Enable current-controlled stimulation on a set of channels
+            %x Enable voltage-controlled stimulation on a set of channels
             %
             %   
             
             if nargin == 1
-                obj.h.SetVoltageMode();
                 obj.channel_modes(:) = {'v'};
+                obj.h.SetVoltageMode();
             else
                 obj.channel_modes(channels_1b) = {'v'};
                 obj.h.SetVoltageMode(channels_1b - 1);
