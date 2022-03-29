@@ -26,7 +26,7 @@ classdef waveform < handle
         internal_amp_units %either uA or mV
         
         durations_ms   %ms
-        durations_s %For reasons that are unclear to me know this is a
+        durations_s %For reasons that are unclear to me now this is a
         %duplication of the durations
         
         start_times_ms %ms
@@ -52,24 +52,24 @@ classdef waveform < handle
     
     methods (Static)
         function obj = monophasic(amplitude,duration,varargin)
-         	%
+            %
             %   obj = mcs.stg.waveform.monophasic(amplitude,duration,varargin)
             %
             %   Inputs
             %   ------
-            %   amplitude : 
-            %   duration : 
+            %   amplitude :
+            %   duration :
             %
             %   Optional Inputs
             %   ---------------
-            %   amp_units : 
+            %   amp_units :
             %       - 'mA'
             %       - 'uA' (default)
             %       - 'nA'
             %       - 'V'
             %       - 'mV'
             %       - 'uV'
-            %   duration_units : 
+            %   duration_units :
             %       - 's'
             %       - 'ms' (default)
             %       - 'us'
@@ -108,14 +108,14 @@ classdef waveform < handle
             %
             %   Optional Inputs
             %   ---------------
-            %   amp_units : 
+            %   amp_units :
             %       - 'mA'
             %       - 'uA' (default)
             %       - 'nA'
             %       - 'V'
             %       - 'mV'
             %       - 'uV'
-            %   duration_units : 
+            %   duration_units :
             %       - 's'
             %       - 'ms' (default)
             %       - 'us'
@@ -133,7 +133,9 @@ classdef waveform < handle
             %   2) Allow spacing between pulses
             
             in.amp_units = 'uA';
+           
             in.duration_units = 'ms';
+          
             in = mcs.sl.in.processVarargin(in,varargin);
             
             obj = mcs.stg.waveform();
