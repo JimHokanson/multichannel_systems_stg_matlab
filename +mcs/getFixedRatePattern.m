@@ -5,6 +5,8 @@ function pt = getFixedRatePattern(rate,varargin)
 %   Optional Inputs defined at:
 %   mcs.stg.pulse_train.fixed_rate
 %
+%   Examples
+%   --------
 %   % 1) 10 Hz pulse train
 %   pt1 = mcs.getFixedRatePattern(10);
 %
