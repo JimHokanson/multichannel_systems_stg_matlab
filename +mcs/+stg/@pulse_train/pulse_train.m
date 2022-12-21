@@ -38,6 +38,14 @@ classdef pulse_train < matlab.mixin.Copyable
     %       sampling rate, this should be 1/fs. MUST be in seconds
     %   waveform : default 1 amp_unit, 100 us, biphasic
     %       This is the waveform that gets replicated.
+    %
+    %   Repeating
+    %   ---------
+    %   Repeats can either be configured into the pattern itself, or can be
+    %   specified to the stimulator. Any down time (zeros) between the end
+    %   of the pattern and repeating of the pattern must be a part of the
+    %   pattern itself. The stimulator won't insert zeros onto the end of
+    %   the pattern before repeating.
     %   
     %
     %   See Also
@@ -1345,7 +1353,7 @@ classdef pulse_train < matlab.mixin.Copyable
                 varargout{1} = obj;
             end
         end
-        function varargout = plot(obj)
+        function varargout = plot(obj,varargin)
             %x Plot the stimuli
             %
             %   h = plot(obj)
