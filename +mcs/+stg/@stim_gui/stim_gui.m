@@ -59,6 +59,7 @@ classdef stim_gui < handle
             obj.h.amplitude.ValueChangedFcn = @(~,~)obj.saveAmplitudeToDisk();
             obj.h.frequency.ValueChangedFcn = @(~,~)obj.saveFrequencyToDisk();
             obj.h.pulse_width.ValueChangedFcn = @(~,~)obj.savePulse_WidthToDisk();
+            obj.h.UIFigure.CloseRequestFcn = @(~,~)h__closeFigure(obj);
             obj.loadAmplitudeFromDisk();
             obj.loadFrequencyFromDisk();
             obj.loadPulse_WidthFromDisk();
@@ -245,6 +246,12 @@ classdef stim_gui < handle
         function stopStimDevice(obj,chan_id)
             %chan_id - array of channels
             obj.h_stim.stopStim('triggers',chan_id);
+        end
+          function h__closeFigure(obj)
+            delete(obj.h.UIFigure);
+        delete(obj.h);
+            delete(obj);
+            
         end
     end
 end
