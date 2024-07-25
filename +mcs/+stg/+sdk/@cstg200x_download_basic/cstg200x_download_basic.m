@@ -317,7 +317,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
                 b(in.start_chan:end_chan) = sync_cap;
             end
             
-            obj.h.SetCapacity(a,b);
+            %obj.h.SetCapacity(a,b);
         end
         function setChannelCapacity(obj,capacity,varargin)
             %
@@ -359,7 +359,7 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
                 a(in.start_chan:end_chan) = capacity;
             end
             
-            obj.h.SetCapacity(a,b);
+            %obj.h.SetCapacity(a,b);
         end
         function setSyncCapacity(obj,capacity,varargin)
             %
@@ -381,23 +381,37 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
                 b(in.start_chan:end_chan) = capacity;
             end
             
-            obj.h.SetCapacity(a,b);
+            %obj.h.SetCapacity(a,b);
         end
         function [chan_capacity,sync_capacity] = getChannelAndSyncCapacity(obj)
-            [a,b] = obj.h.GetCapacity();
+            try
+                [a,b] = obj.h.GetCapacity();
+            catch
+                %JAH: I need to email MCS about this, why doesn't this
+                %exist
+                a = 1e6;
+                b = 1e6;
+            end
             chan_capacity = uint32(a);
             sync_capacity = uint32(b);
         end
         function chan_capacity = getChannelCapacity(obj)
             %x Retrieve the # of bytes that each channel can store
             %   In
-            [a,~] = obj.h.GetCapacity();
+            try
+                [a,~] = obj.h.GetCapacity();
+            catch
+                a = 1e6;
+            end
             chan_capacity = uint32(a);
         end
         function sync_capacity = getSyncCapacity(obj)
             %x Retrieve the # of bytes that each sync channel can store
-            
-            [~,b] = obj.h.GetCapacity();
+            try
+                [~,b] = obj.h.GetCapacity();
+            catch
+                b = 1e6;
+            end
             sync_capacity = uint32(b);
         end
     end

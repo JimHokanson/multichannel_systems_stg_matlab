@@ -7,11 +7,13 @@ classdef stg_destination
         voltage = h__loadValue(1)
         current = h__loadValue(2)
         sync = h__loadValue(3)
+        %{
         current_and_boost_gnd_sync = h__loadValue(4)
         current_and_sync = h__loadValue(5)
         positive_current = h__loadValue(6)
         positive_current_and_boost_gnd_sync = h__loadValue(7)
         positive_current_and_sync = h__loadValue(8)
+        %}
     end
     
     methods
@@ -22,6 +24,24 @@ end
 function value_out = h__loadValue(value_in)
 
     mcs.stg.sdk.load();
+
+    %{
+        New options from new driver ...
+
+        channeldata_voltage   
+        channeldata_current   
+        syncoutdata   
+        channeldata_positive_voltage   
+        channeldata_positive_current   
+        rawdata   
+        channeldata_current_own_sync   
+        channeldata_positive_current_own_sync   
+        channeldata_current_own_boost_gnd_sync   
+        channeldata_positive_current_own_boost_gnd_sync   
+        channeldata_current_always_boost   
+        channeldata_current_always_boost_own_sync  
+
+    %}
     
     switch value_in
         case 1

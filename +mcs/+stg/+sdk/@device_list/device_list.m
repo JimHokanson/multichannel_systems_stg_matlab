@@ -26,7 +26,13 @@ classdef device_list < handle
             %   obj = mcs.stg.sdk.device_list()
             
             mcs.stg.sdk.load();
-            obj.h = Mcs.Usb.CMcsUsbListNet();
+            try
+                %This is the old way ...
+                obj.h = Mcs.Usb.CMcsUsbListNet();
+            catch
+                usb_enum = Mcs.Usb.DeviceEnumNet.MCS_DEVICE_USB;
+                obj.h = Mcs.Usb.CMcsUsbListNet(usb_enum);
+            end
             
             %TODO: Support callbacks ...
             %----------------------------------

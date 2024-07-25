@@ -26,7 +26,7 @@ classdef sdk < handle
     %}
     
     properties (Constant)
-        DRIVER_VERSION = '3_2_71'
+        DRIVER_VERSION = 'latest'
     end
     
     properties

@@ -245,12 +245,12 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
            for i = 1:n_channels
                cur_chan = channels_1b(i);
-               wtf1 = c_stim.prepareData(raw_data(i));
+               wtf1 = c_stim.prepareData(cur_chan,raw_data(i));
                len = wtf1.DeviceDataLength;
                chan_capacity(cur_chan) = len;
                if in.use_sync
                    %mcs.stg.sdk.c_stimulus_function>prepareSyncData
-                   wtf1 = c_stim.prepareSyncData(raw_data(i));
+                   wtf1 = c_stim.prepareSyncData(cur_chan,raw_data(i));
                    len = wtf1.DeviceDataLength;
                    sync_capacity(cur_chan) = len;
                else

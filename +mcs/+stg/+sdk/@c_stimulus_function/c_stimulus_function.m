@@ -35,7 +35,7 @@ classdef c_stimulus_function
             
             obj.h = h;
         end
-        function value = prepareData(obj,data)
+        function value = prepareData(obj,chan_id,data)
             %
             %   value = prepareData(obj,data)
             %
@@ -81,10 +81,23 @@ classdef c_stimulus_function
                    type = mcs.enum.stg_destination.current;
                 end
             end
-
-            value = obj.h.PrepareData(a,d,type);
+            %PrepareData (int channel, array< int32_t >^ amplitude, array< uint64_t >^ duration, STG_DestinationEnumNet destType)
+            try
+                %TODO: ALl of these tries need version switches, not try
+                %statements
+                %
+                %   See below for sync, this all needs to be cleaned up
+                value = obj.h.PrepareData(a,d,type);
+            catch
+                % CStimulusFunctionNet  
+                try
+                    value = obj.h.PrepareData(chan_id,a,d,type);
+                catch
+                    value = obj.h.Stimulus.PrepareData(chan_id,a,d,type);
+                end
+            end
         end
-        function value = prepareSyncData(obj,data)
+        function value = prepareSyncData(obj,chan_id,data)
             %
             %   TODO: Update documentation, very similar to prepareData
             %
@@ -100,7 +113,18 @@ classdef c_stimulus_function
                 a(a ~= 0) = 1;
             end
             type = mcs.enum.stg_destination.sync;
-            value = obj.h.PrepareData(a,d,type);
+            try
+                %TODO: ALl of these tries need version switches, not try
+                %statements
+                value = obj.h.PrepareData(a,d,type);
+            catch
+                % CStimulusFunctionNet  
+                try
+                    value = obj.h.PrepareData(chan_id,a,d,type);
+                catch
+                    value = obj.h.Stimulus.PrepareData(chan_id,a,d,type);
+                end
+            end
         end
         function clearSyncData(obj)
             %TODO: I'm not sure how to call this since no documentation

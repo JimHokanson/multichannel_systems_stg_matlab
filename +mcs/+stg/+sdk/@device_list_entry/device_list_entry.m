@@ -31,7 +31,12 @@ classdef device_list_entry < handle
             %TODO: We could make this lazy ...
             
             obj.device_id = mcs.stg.device_id(h.DeviceId);
-            obj.device_path = char(h.DevicePath);
+            try
+                %This was removed in the new driver
+                obj.device_path = char(h.DevicePath);
+            catch
+                obj.device_path = 'not specified - new driver';
+            end
             obj.hw_version = char(h.HwVersion);
             obj.serial_number = char(h.SerialNumber);
             obj.device_name = char(h.DeviceName);
