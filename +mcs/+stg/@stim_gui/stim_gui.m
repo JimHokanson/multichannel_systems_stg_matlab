@@ -7,7 +7,12 @@ classdef stim_gui < handle
     %   --------
     %   mcs.stimGUI
     %
-    %
+    %   Improvements
+    %   ------------
+    %   1) Expose monophasic option
+    %   2) Fix # of channels per device - make this dynamic based on device
+    %   3) Disable controls while stimulating - don't want to turn off
+    %   wrong channel
     
     %{
     mcs.stimGUI
@@ -30,7 +35,21 @@ classdef stim_gui < handle
         h_stim %Handle to stimulator
         %mcs.stg.sdk.cstg200x_download
         stim_flag
-        chan_id
+    end
+
+    properties (Dependent)
+        save_path
+    end
+
+    methods
+        function value = get.save_path(obj)
+            device_info = obj.h_stim.device_info;
+            package_root = sl.stack.getPackageRoot();
+            save_root = sl.dir.createFolderIfNoExist(package_root,'temp_data','stim_gui');
+            chan_id = obj.h.chan_selector.Value;
+            file_name = sprintf('%s_%02d.mat',device_info.serial_number,chan_id);
+            value = fullfile(save_root,file_name);
+        end
     end
     
     methods
@@ -57,18 +76,18 @@ classdef stim_gui < handle
             obj.h.frequency;
             obj.h.pulse_width;
             obj.h.chan_selector;
-            obj.h.amp_units;
-            obj.h.pw_units;
+            obj.h.amp_units.ValueChangedFcn = @(~,~)obj.saveParams();
+            obj.h.amp_units.ItemsData = obj.h.amp_units.Items;
+            obj.h.pw_units.ValueChangedFcn = @(~,~)obj.saveParams();
+            obj.h.pw_units.ItemsData = obj.h.pw_units.Items;
             obj.h.startstim.ButtonPushedFcn = @(~,~)obj.startStim();
             obj.h.stopstim.ButtonPushedFcn = @(~,~)obj.StopStim();
             obj.h.stopstim.Position = obj.h.startstim.Position;
             obj.h.stopstim.Visible = 'off';
-            obj.h.amplitude.ValueChangedFcn = @(~,~)obj.saveAmplitudeToDisk();
-            obj.h.frequency.ValueChangedFcn = @(~,~)obj.saveFrequencyToDisk();
-            obj.h.pulse_width.ValueChangedFcn = @(~,~)obj.savePulse_WidthToDisk();
-            obj.loadAmplitudeFromDisk();
-            obj.loadFrequencyFromDisk();
-            obj.loadPulse_WidthFromDisk();
+            obj.h.amplitude.ValueChangedFcn = @(~,~)obj.saveParams();
+            obj.h.frequency.ValueChangedFcn = @(~,~)obj.saveParams();
+            obj.h.pulse_width.ValueChangedFcn = @(~,~)obj.saveParams();
+            
             %obj.chan_id = obj.h.chan_selector.Value;
             % chan_id = obj.chan_id;
             
@@ -94,9 +113,18 @@ classdef stim_gui < handle
             
             %  end
             
-            
-            h_stim.setupTrigger ('linearize',true,'repeat_all',in.n_repeats_all);
+            device_info = h_stim.device_info;
+            label_string = sprintf('%s:%s',device_info.device_name,device_info.serial_number);
+            uilabel(obj.h.UIFigure,'Text',label_string,'Position',[130 275 100 20]);
+
+
+            if ~h_stim.device_info.is_stg5
+                h_stim.setupTrigger('linearize',true,'repeat_all',in.n_repeats_all);
+            end
+
             obj.h_stim = h_stim;
+            %Has to occur after stimulator loads
+            obj.loadParams;
             
             %TODO: show this in the GUI, maybe as the figure name
             %obj.serial = h_stim.serial_number; %as string
@@ -104,9 +132,52 @@ classdef stim_gui < handle
             %TODO: Set # of channels in the GUI based on:
             %h_stim.n_analog_channels
             
+
             
         end
-        
+        function loadParams(obj)
+            if exist(obj.save_path,'file')
+                s = load(obj.save_path);
+                try
+                    obj.h.amplitude.Value = s.amplitude;
+                catch
+                    fprintf(2,'Amp loading failed\n');
+                end
+                try
+                    obj.h.frequency.Value = s.frequency;
+                catch
+                    fprintf(2,'Freq loading failed\n');
+                end
+                try
+                    obj.h.pulse_width.Value = s.pulse_width;
+                catch
+                    fprintf(2,'PW loading failed\n');
+                end
+                try
+                    obj.h.amp_units.Value = s.amp_units;
+                catch
+                    fprintf(2,'amp_units loading failed\n');
+                end
+                try
+                    obj.h.pw_units.Value = s.pw_units;
+                catch
+                    fprintf(2,'PW_units loading failed\n');
+                end
+            end
+        end
+        function saveParams(obj)
+            s = struct;
+            s.amplitude = obj.h.amplitude.Value;
+            s.frequency = obj.h.frequency.Value;
+            s.pulse_width = obj.h.pulse_width.Value;
+            s.amp_units = obj.h.amp_units.Value;
+            s.pw_units = obj.h.pw_units.Value;
+
+            save(obj.save_path,'-struct','s')
+        end
+
+        %{
+
         function loadAmplitudeFromDisk(obj)
             AmplitudeFile_path = obj.getAmplitudeSavePath();
             if exist(AmplitudeFile_path,'file')
@@ -120,7 +191,7 @@ classdef stim_gui < handle
             if exist(FrequencyFile_path,'file')
                 h2 = load(FrequencyFile_path);
                 s = h2.s;
-                obj.h.frequency.Value = s.frequency;
+                
             end
         end
         function loadPulse_WidthFromDisk(obj)
@@ -167,7 +238,7 @@ classdef stim_gui < handle
             file_name = sprintf('stim_pulse_width_data_%02d.mat',obj.chan_id);
             Pulse_WidthFile_path = fullfile(save_root,file_name);
         end
-        
+        %}
         function startStim(obj)
             %mcs.stg.waveform.biphasic
             %mcs.stg.pulse_train.fixed_rate
@@ -177,22 +248,22 @@ classdef stim_gui < handle
             %obj.h.start.BackgroundColor = [0 1 0];
             %chan_id = obj.h.chan_selector.Value;
             
-            au = obj.h.amp_units;
-            amp_units = au.Items{au.Value};
+            au = obj.h.amp_units.Value;
+            amp_units = au; %au.Items{au.Value};
             % if obj.h.amp_units.Value == 1
             %     amplitude = obj.h.amplitude.Value;
             % else
             %     amplitude = 1000*obj.h.amplitude.Value;
             % end
             
-            pw = obj.h.pw_units;
-            duration_units = pw.Items{pw.Value};
+            pw = obj.h.pw_units.Value;
+            duration_units = pw; %pw.Items{pw.Value};
             % if obj.h.pw_units.Value == 1
             %     duration = obj.h.pulse_width.Value;
             % else
             %     duration = 1000*obj.h.pulse_width.Value;
             % end
-            chan_id = obj.h.chan_selector.Value;
+            chan_id2 = obj.h.chan_selector.Value;
             rate = obj.h.frequency.Value;
             duration = obj.h.pulse_width.Value;
             amplitude = obj.h.amplitude.Value;
@@ -202,29 +273,19 @@ classdef stim_gui < handle
 
 
             pattern = mcs.stg.pulse_train.fixed_rate(rate,'waveform',waveform);
-            obj.startStimDevice(chan_id,pattern);
+            obj.startStimDevice(chan_id2,pattern);
             obj.h.startstim.Visible= 'off';
             obj.h.stopstim.Visible= 'on';
             
-            %  else
-            %     obj.h.start.Text = 'Stop Stim';
-            %     obj.h.start.BackgroundColor = [0 0 1];
-            %     obj.stopStimDevice(chan_id,pattern);
-            % end
             obj.stim_flag = ~obj.stim_flag;
             
-            % if obj.stim_flag ==  true
-            %    obj.stopStimDevice(chan_id,pattern);
-            % end
-            
-            %Get patterns if starting stim
-            %call startStimDevice or stopStimDevice
         end
         
         
         function StopStim(obj)
            % chan_id=obj.h.chan_selector.Value;
-            obj.stopStimDevice(obj.chan_id);
+            chan_id2 = obj.h.chan_selector.Value;
+            obj.stopStimDevice(chan_id2);
             obj.h.startstim.Visible= 'on';
             obj.h.stopstim.Visible= 'off';
         end
@@ -256,6 +317,7 @@ classdef stim_gui < handle
             % this a certain # of times ...
             
             obj.h_stim.setupTrigger('linearize',true,'repeat_all',in.n_repeats_all);
+
             obj.h_stim.sentDataToDevice(chan_id,pattern);
             obj.h_stim.startStim('triggers',chan_id);
         end

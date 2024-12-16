@@ -96,6 +96,15 @@ classdef trigger < handle
             %
             %   This class should not be called directly.
             %
+            %   Inputs
+            %   ------
+            %   d :
+            %   c_map :
+            %   s_map :
+            %   repeats :
+            %   n_chans :
+            %   n_syncs :
+            %
             %   See Also
             %   --------
             %   mcs.stg.sdk.cstg200x_download_basic.getTrigger

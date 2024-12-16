@@ -9,6 +9,7 @@ classdef device_list_entry < handle
     %   See Also
     %   --------
     %   Mcs.Usb.CMcsUsbListEntryNet
+    %   mcs.getDevicesInfo
     
     properties (Hidden)
         h
@@ -23,7 +24,21 @@ classdef device_list_entry < handle
         product
         manufacturer
     end
-    
+
+    properties (Dependent)
+        is_stg5
+        is_stg4
+    end
+
+    methods
+        function value = get.is_stg5(obj)
+            value = strcmp(obj.product,'STG5');
+        end
+        function value = get.is_stg4(obj)
+            value = strcmp(obj.product,'STG4004');
+        end
+    end
+
     methods
         function obj = device_list_entry(h)
             obj.h = h;
@@ -43,6 +58,9 @@ classdef device_list_entry < handle
             obj.product = char(h.Product);
             obj.manufacturer = char(h.Manufacturer);
         end
+        function t = getDispText(obj) %#ok<MANU>
+            t = evalc('disp(obj)');
+        end
         function device = getDownloadInterface(obj)
             %
             %   device = getDownloadInterface(obj)
@@ -61,6 +79,7 @@ classdef device_list_entry < handle
             mcs.stg.sdk.handleError(ERR_ID,'Failed to connect to the device',error_code)
             
             device = mcs.stg.sdk.cstg200x_download(d);
+            device.device_info = obj;
         end
     end
     

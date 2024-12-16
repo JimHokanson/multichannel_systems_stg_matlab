@@ -205,6 +205,21 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             in = mcs.sl.in.processVarargin(in,varargin);
             
             %The default trigger settings
+            %
+            %   This doesn't seem to work for STG5
+            %
+            %   The getTrigger doesn't work
+            if obj.device_info.is_stg5
+                %Hardcoding ...
+                first_trigger_0b = 0;
+                mask_obj = mcs.utils.bitmask({1 2 0 0 0 0 0 0});
+                chan_maps = mask_obj.values;
+                sync_maps = mask_obj.values;
+                repeats = zeros(1,8);
+                obj.h.SetupTrigger(uint32(first_trigger_0b),...
+                uint32(chan_maps),uint32(sync_maps),uint32(repeats));
+                return
+            end
             t = obj.getTrigger();
             
             I = in.first_trigger;
@@ -275,8 +290,10 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             h = obj.h;
             
+            %Returned values are UInt32[] (.NET arrays)
             [c2,s2,r2] = GetTrigger(h);
             
+            %mcs.stg.trigger
             trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
                 obj.n_analog_channels,obj.n_syncout_channels);
         end

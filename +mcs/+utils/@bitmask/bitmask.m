@@ -6,6 +6,17 @@ classdef bitmask < handle
     %   The purpose of this class is to facilitate entering of values for
     %   bit masks.
     %
+    %   channel map format
+    %   index - trigger #
+    %   value - selected channnels (based on bit mask)
+    %
+    %   Code from the manual ...
+    %   channelmap[0] = 0x1 + 0x4; // Channel 1 und Channel 3 to Trigger 1
+    %   syncoutmap[0] = 0x1; // Syncout 1 to Trigger 1
+    %   autostart[0] = 1;
+    %   callback_threshold[0] = 50; // 50% of buffer size
+    %   device.SetupTrigger(channelmap, syncoutmap, digoutmap, autostart, callback_threshold);
+    %
     %   See Also
     %   --------
     %   mcs.stg.trigger

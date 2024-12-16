@@ -39,14 +39,21 @@ if nargin == 0
     id = 1;
 end
 
+%We'll assume that serial and product don't overlap ...
+devs = mcs.getDevicesInfo();
+
+%TODO: I think all of this could be simplified because our entry
+%point is essentially asking the info for the interface
+%
+%   This fromIndex calls that method I believe
 if isnumeric(id)
     %   mcs.stg.sdk.cstg200x_download
     d = mcs.stg.sdk.cstg200x_download.fromIndex(id);
+    
 return
 end
 
-%We'll assume that serial and product don't overlap ...
-devs = mcs.getDevicesInfo();
+
 if isempty(devs)
     error('No stimulators found connected to computer')
 end

@@ -51,7 +51,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
     %}
     
     properties
-        
+        device_info mcs.stg.sdk.device_list_entry
     end
     
     methods (Static)
@@ -63,6 +63,10 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
             %   Examples
             %   --------
             %   d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
+            %
+            %   This is a bit outdated. We now support passing in
+            %   'stimulator_id' which takes the index as well as
+            %   the device or serial
             
             dl = mcs.stg.sdk.device_list();
             
