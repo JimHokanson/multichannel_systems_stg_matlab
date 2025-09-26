@@ -171,20 +171,30 @@ classdef stim_gui < handle
             %obj.h.start.BackgroundColor = [0 1 0];
             %chan_id = obj.h.chan_selector.Value;
             
+            au = obj.h.amp_units;
+            amp_units = au.Items{au.Value};
+            % if obj.h.amp_units.Value == 1
+            %     amplitude = obj.h.amplitude.Value;
+            % else
+            %     amplitude = 1000*obj.h.amplitude.Value;
+            % end
             
-            if obj.h.amp_units.Value == 1
-                amplitude = obj.h.amplitude.Value;
-            else
-                amplitude = 1000*obj.h.amplitude.Value;
-            end
-            if obj.h.pw_units.Value == 1
-                duration = obj.h.pulse_width.Value;
-            else
-                duration = 1000*obj.h.pulse_width.Value;
-            end
-            chan_id=obj.h.chan_selector.Value;
+            pw = obj.h.pw_units;
+            duration_units = pw.Items{pw.Value};
+            % if obj.h.pw_units.Value == 1
+            %     duration = obj.h.pulse_width.Value;
+            % else
+            %     duration = 1000*obj.h.pulse_width.Value;
+            % end
+            chan_id = obj.h.chan_selector.Value;
             rate = obj.h.frequency.Value;
-            waveform = mcs.stg.waveform.biphasic(amplitude,duration);
+            duration = obj.h.pulse_width.Value;
+            amplitude = obj.h.amplitude.Value;
+            waveform = mcs.stg.waveform.biphasic(amplitude,duration,...
+                'amp_units',amp_units,'duration_units',duration_units);
+            %waveform = mcs.stg.waveform.biphasic(amplitude,duration);
+
+
             pattern = mcs.stg.pulse_train.fixed_rate(rate,'waveform',waveform);
             obj.startStimDevice(chan_id,pattern);
             obj.h.startstim.Visible= 'off';
