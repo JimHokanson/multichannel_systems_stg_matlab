@@ -27,10 +27,14 @@ classdef device_list_entry < handle
     methods
         function obj = device_list_entry(h)
             obj.h = h;
-            
+
             %TODO: We could make this lazy ...
-            
-            obj.device_id = mcs.stg.device_id(h.DeviceId);
+
+            try
+                obj.device_id = mcs.stg.device_id(h.DeviceId);
+            catch
+                obj.device_id = [];
+            end
             obj.device_path = char(h.DevicePath);
             obj.hw_version = char(h.HwVersion);
             obj.serial_number = char(h.SerialNumber);
@@ -55,10 +59,10 @@ classdef device_list_entry < handle
             error_code = d.Connect(obj.h);
             mcs.stg.sdk.handleError(ERR_ID,'Failed to connect to the device',error_code)
             
-            device = mcs.stg.sdk.cstg200x_download(d);
+            device = mcs.stg.sdk.cstg200x_download(d,obj);
         end
     end
-    
+
 end
 
 % device = CStg200xDownloadNet();

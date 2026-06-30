@@ -30,6 +30,9 @@ classdef cstg200x_basic < handle
         driver_version
         d1 = '---- mcs.stg.sdk.cstg200x_basic ----'
         serial_number
+        device_id
+        device_product
+        device_name
         channel_modes
     end
     
@@ -101,13 +104,35 @@ classdef cstg200x_basic < handle
     end
     
     methods
-        function obj = cstg200x_basic(h)
+        function obj = cstg200x_basic(h,source_entry)
+            if nargin < 2
+                source_entry = [];
+            end
+
             obj.h = h;
-            
+
             obj.driver_version = mcs.stg.sdk.DRIVER_VERSION;
-            
+
             obj.serial_number = char(h.SerialNumber);
-            
+            try
+                obj.device_id = mcs.stg.device_id(h.GetDeviceId());
+            catch
+                obj.device_id = [];
+            end
+
+            obj.device_product = '';
+            obj.device_name = '';
+            if ~isempty(source_entry)
+                if isempty(obj.device_id)
+                    obj.device_id = source_entry.device_id;
+                end
+                obj.device_product = source_entry.product;
+                obj.device_name = source_entry.device_name;
+                if isempty(obj.serial_number)
+                    obj.serial_number = source_entry.serial_number;
+                end
+            end
+
             if isempty(obj.serial_number)
                 error('Empty serial number, something is wrong ...')
             end
@@ -115,7 +140,9 @@ classdef cstg200x_basic < handle
             %Set channel modes
             n_chans = h.GetNumberOfAnalogChannels;
             obj.channel_modes = repmat({'c'},1,n_chans);
-            obj.setCurrentMode();
+            if ~obj.usesDownloadDestinationOutputMode()
+                obj.setCurrentMode();
+            end
         end
     end
     
@@ -222,7 +249,16 @@ classdef cstg200x_basic < handle
             
             
             % n_chans = obj.n_analog_channels;
-            
+
+            if obj.usesDownloadDestinationOutputMode()
+                if nargin == 1
+                    obj.channel_modes(:) = {'c'};
+                else
+                    obj.channel_modes(channels_1b) = {'c'};
+                end
+                return
+            end
+
             if nargin == 1
                 obj.h.SetCurrentMode();
                 obj.channel_modes(:) = {'c'};
@@ -235,8 +271,17 @@ classdef cstg200x_basic < handle
         function setVoltageMode(obj,channels_1b)
             %x Enable voltage-controlled stimulation on a set of channels
             %
-            %   
-            
+            %
+
+            if obj.usesDownloadDestinationOutputMode()
+                if nargin == 1
+                    obj.channel_modes(:) = {'v'};
+                else
+                    obj.channel_modes(channels_1b) = {'v'};
+                end
+                return
+            end
+
             if nargin == 1
                 obj.channel_modes(:) = {'v'};
                 obj.h.SetVoltageMode();
@@ -245,8 +290,42 @@ classdef cstg200x_basic < handle
                 obj.h.SetVoltageMode(channels_1b - 1);
             end
         end
+        function tf = usesDownloadDestinationOutputMode(obj)
+            %x STG5 chooses current/voltage via download destination.
+            %
+            % The bundled 3.2.71 SDK documents SetCurrentMode and
+            % SetVoltageMode as STG3008-FA/STG400x only. STG5 products are
+            % C248, C249, and C24A in MC_Stimulus III driver INF files.
+
+            tf = false;
+            device_text = lower(sprintf('%s %s',obj.device_product,obj.device_name));
+            if contains(device_text,'stg5')
+                tf = true;
+                return
+            end
+
+            if isempty(obj.device_id)
+                return
+            end
+
+            product_text = lower(char(obj.device_id.product.ToString()));
+            product_hex = '';
+            try
+                product_hex = lower(dec2hex(int32(obj.device_id.product)));
+            catch
+            end
+
+            product_text = sprintf('%s %s',product_text,product_hex);
+            tf = contains(product_text,'49736') || ... % 0xC248 STG5
+                contains(product_text,'49737') || ...  % 0xC249 STG5-HV
+                contains(product_text,'49738') || ...  % 0xC24A STG5-Opto
+                contains(product_text,'c248') || ...
+                contains(product_text,'c249') || ...
+                contains(product_text,'c24a') || ...
+                contains(product_text,'stg5');
+        end
     end
-    
+
 end
 
 

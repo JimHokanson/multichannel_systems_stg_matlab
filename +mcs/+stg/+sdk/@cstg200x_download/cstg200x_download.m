@@ -65,16 +65,22 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
             %   d = mcs.stg.sdk.cstg200x_download.fromIndex(1);
             
             dl = mcs.stg.sdk.device_list();
-            
+
             %mcs.stg.sdk.device_list_entry
-            entry = dl.getEntry(index_1b);
-            
+            entries = dl.getAllEntries();
+            if index_1b > length(entries)
+                error('mcs:stg:sdk:cstg200x_download:fromIndex',...
+                    'Device requested: %d, is greater than the # of STG devices present: %d',...
+                    index_1b,length(entries))
+            end
+            entry = entries(index_1b);
+
             obj = entry.getDownloadInterface();
         end
     end
     
     methods
-        function obj = cstg200x_download(h)
+        function obj = cstg200x_download(h,varargin)
             %x Constructor for download class
             %
             %   obj = mcs.stg.sdk.cstg200x_download(h)
@@ -83,7 +89,7 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
             %   1) The fromIndex() method of this class
             %   2) From getDownloadInterface() of mcs.stg.sdk.device_list_entry
             
-            obj = obj@mcs.stg.sdk.cstg200x_download_basic(h);
+            obj = obj@mcs.stg.sdk.cstg200x_download_basic(h,varargin{:});
         end
     end
     methods
@@ -164,10 +170,6 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
            
            %TODO: Verify memory capacity
            
-           %Needed for getting memory requirements for stim
-           %c_stim : mcs.stg.sdk.c_stimulus_function
-           c_stim = obj.stimulus;
-           
            n_channels = length(channels_1b);
            if ~iscell(data)
                data = {data};
@@ -238,32 +240,37 @@ classdef cstg200x_download < mcs.stg.sdk.cstg200x_download_basic
                end
            end
            
-           %Memory setup 
+           %Memory setup
            %------------------------------------------
-           %get current values, then override with what we are going
-           %to use
-           [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
-           for i = 1:n_channels
-               cur_chan = channels_1b(i);
-               wtf1 = c_stim.prepareData(raw_data(i));
-               len = wtf1.DeviceDataLength;
-               chan_capacity(cur_chan) = len;
-               if in.use_sync
-                   %mcs.stg.sdk.c_stimulus_function>prepareSyncData
-                   wtf1 = c_stim.prepareSyncData(raw_data(i));
+           if ~obj.usesDownloadDestinationOutputMode()
+               %Needed for getting memory requirements for stim
+               %c_stim : mcs.stg.sdk.c_stimulus_function
+               c_stim = obj.stimulus;
+
+               %get current values, then override with what we are going
+               %to use
+               [chan_capacity,sync_capacity] = obj.getChannelAndSyncCapacity();
+               for i = 1:n_channels
+                   cur_chan = channels_1b(i);
+                   wtf1 = c_stim.prepareData(raw_data(i));
                    len = wtf1.DeviceDataLength;
-                   sync_capacity(cur_chan) = len;
-               else
-                   %TODO: Write test case for this ...
-                   %This should mean that if we switch to a stim only
-                   %condition the sync doesn't show up still
-                   sync_capacity(cur_chan) = 0;
+                   chan_capacity(cur_chan) = len;
+                   if in.use_sync
+                       %mcs.stg.sdk.c_stimulus_function>prepareSyncData
+                       wtf1 = c_stim.prepareSyncData(raw_data(i));
+                       len = wtf1.DeviceDataLength;
+                       sync_capacity(cur_chan) = len;
+                   else
+                       %TODO: Write test case for this ...
+                       %This should mean that if we switch to a stim only
+                       %condition the sync doesn't show up still
+                       sync_capacity(cur_chan) = 0;
+                   end
                end
+               %Note, this call below must be done simultaneously as
+               %modification of one can impact the other
+               obj.setChannelAndSyncCapacity(chan_capacity,sync_capacity);
            end
-           %Note, this call below must be done simultaneously as 
-           %modification of one can impact the other
-           obj.setChannelAndSyncCapacity(chan_capacity,sync_capacity);
-           
 
            %Upload stim to memory
            %---------------------------------

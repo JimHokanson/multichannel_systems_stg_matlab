@@ -41,7 +41,7 @@ classdef stim_gui < handle
             in.n_repeats_all = 0; %might expose this in the GUI itself
             %0 - run forever
             %1+ - run a specific # of times
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             obj.h = mcs.stg.stim_gui_app();
 
@@ -59,6 +59,7 @@ classdef stim_gui < handle
             obj.h.amplitude.ValueChangedFcn = @(~,~)obj.saveAmplitudeToDisk();
             obj.h.frequency.ValueChangedFcn = @(~,~)obj.saveFrequencyToDisk();
             obj.h.pulse_width.ValueChangedFcn = @(~,~)obj.savePulse_WidthToDisk();
+            obj.chan_id = obj.h.chan_selector.Value;
             obj.loadAmplitudeFromDisk();
             obj.loadFrequencyFromDisk();
             obj.loadPulse_WidthFromDisk();
@@ -143,24 +144,29 @@ classdef stim_gui < handle
             save(Pulse_WidthFile_path,'s');
         end
         function AmplitudeFile_path = getAmplitudeSavePath(obj)
-            package_root = sl.stack.getPackageRoot();
-            save_root = sl.dir.createFolderIfNoExist(package_root,'temp_data','elite11');
+            save_root = obj.getSaveRoot();
             file_name = sprintf('stim_amplitude_data_%02d.mat',obj.chan_id);
             AmplitudeFile_path = fullfile(save_root,file_name);
         end
         function FrequencyFile_path = getFrequencySavePath(obj)
-            package_root = sl.stack.getPackageRoot();
-            save_root = sl.dir.createFolderIfNoExist(package_root,'temp_data','elite11');
+            save_root = obj.getSaveRoot();
             file_name = sprintf('stim_frequency_data_%02d.mat',obj.chan_id);
             FrequencyFile_path = fullfile(save_root,file_name);
         end
         function Pulse_WidthFile_path = getPulse_WidthSavePath(obj)
-            package_root = sl.stack.getPackageRoot();
-            save_root = sl.dir.createFolderIfNoExist(package_root,'temp_data','elite11');
+            save_root = obj.getSaveRoot();
             file_name = sprintf('stim_pulse_width_data_%02d.mat',obj.chan_id);
             Pulse_WidthFile_path = fullfile(save_root,file_name);
         end
-        
+        function save_root = getSaveRoot(~)
+            package_dir = fileparts(which('mcs.stimGUI'));
+            package_root = fileparts(package_dir);
+            save_root = fullfile(package_root,'temp_data','elite11');
+            if ~exist(save_root,'dir')
+                mkdir(save_root);
+            end
+        end
+
         function startStim(obj)
             %mcs.stg.waveform.biphasic
             %mcs.stg.pulse_train.fixed_rate
@@ -171,20 +177,8 @@ classdef stim_gui < handle
             %chan_id = obj.h.chan_selector.Value;
             
             
-            if obj.h.amp_units.Value == 1
-                amplitude = obj.h.amplitude.Value;
-            else
-                amplitude = 1000*obj.h.amplitude.Value;
-            end
-            if obj.h.pw_units.Value == 1
-                duration = obj.h.pulse_width.Value;
-            else
-                duration = 1000*obj.h.pulse_width.Value;
-            end
-            chan_id=obj.h.chan_selector.Value;
-            rate = obj.h.frequency.Value;
-            waveform = mcs.stg.waveform.biphasic(amplitude,duration);
-            pattern = mcs.stg.pulse_train.fixed_rate(rate,'waveform',waveform);
+            [chan_id,pattern] = obj.getStimPatternFromControls();
+            obj.chan_id = chan_id;
             obj.startStimDevice(chan_id,pattern);
             obj.h.startstim.Visible= 'off';
             obj.h.stopstim.Visible= 'on';
@@ -203,8 +197,44 @@ classdef stim_gui < handle
             %Get patterns if starting stim
             %call startStimDevice or stopStimDevice
         end
-        
-        
+
+        function [chan_id,pattern] = getStimPatternFromControls(obj)
+            amplitude = obj.h.amplitude.Value;
+            amp_units = obj.getDropDownText(obj.h.amp_units);
+            duration = obj.h.pulse_width.Value;
+            duration_units = obj.getDropDownText(obj.h.pw_units);
+            chan_id = obj.h.chan_selector.Value;
+            rate = obj.h.frequency.Value;
+
+            waveform = mcs.stg.waveform.biphasic(amplitude,duration,...
+                'amp_units',amp_units,'duration_units',duration_units);
+            pattern = mcs.stg.pulse_train.fixed_rate(rate,'waveform',waveform);
+        end
+
+        function text = getDropDownText(~,drop_down)
+            value = drop_down.Value;
+            items = drop_down.Items;
+            items_data = drop_down.ItemsData;
+
+            if ~isempty(items_data)
+                if iscell(items_data)
+                    idx = find(cellfun(@(x)isequal(x,value),items_data),1);
+                elseif isnumeric(items_data) && isnumeric(value)
+                    idx = find(items_data == value,1);
+                else
+                    idx = find(strcmp(cellstr(string(items_data)),string(value)),1);
+                end
+
+                if ~isempty(idx)
+                    text = char(items{idx});
+                    return
+                end
+            end
+
+            text = char(value);
+        end
+
+
         function StopStim(obj)
            % chan_id=obj.h.chan_selector.Value;
             obj.stopStimDevice(obj.chan_id);
@@ -228,7 +258,7 @@ classdef stim_gui < handle
             
             %TODO:
             in.n_repeats_all = 0;
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             if ~iscell(pattern)
                 pattern = {pattern};

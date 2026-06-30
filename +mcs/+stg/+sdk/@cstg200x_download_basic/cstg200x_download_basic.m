@@ -108,12 +108,12 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     end
     
     methods
-        function obj = cstg200x_download_basic(h)
+        function obj = cstg200x_download_basic(h,varargin)
             %
             %   obj = mcs.stg.sdk.cstg200x_download_basic(h)
-            
-            obj = obj@mcs.stg.sdk.cstg200x_basic(h);
-            
+
+            obj = obj@mcs.stg.sdk.cstg200x_basic(h,varargin{:});
+
         end
         function clearChannelData(obj,channel_1b)
             %x Clears data in a particular channel
@@ -203,22 +203,26 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             in.repeats = [];
             in.repeat_all = false;
             in = mcs.sl.in.processVarargin(in,varargin);
-            
-            %The default trigger settings
-            t = obj.getTrigger();
-            
+
             I = in.first_trigger;
-            
-            n_triggers = t.n_triggers; %#ok<PROPLC>
-            
+
+            n_triggers = obj.n_trigger_inputs;
+
             if in.linearize
-                map = mcs.utils.bitmask(num2cell(1:n_triggers)); %#ok<PROPLC>
-                in.channel_maps = map;
-                in.syncout_maps = map;
+                channel_map = cell(1,n_triggers);
+                syncout_map = cell(1,n_triggers);
+                for i = 1:min(n_triggers,obj.n_analog_channels)
+                    channel_map{i} = i;
+                end
+                for i = 1:min(n_triggers,obj.n_syncout_channels)
+                    syncout_map{i} = i;
+                end
+                in.channel_maps = mcs.utils.bitmask(channel_map);
+                in.syncout_maps = mcs.utils.bitmask(syncout_map);
             end
-            
+
             if ~isempty(in.repeat_all)
-                in.repeats = in.repeat_all*ones(1,n_triggers); %#ok<PROPLC>
+                in.repeats = in.repeat_all*ones(1,n_triggers);
             end
             
             %Bitmask to array conversions
@@ -240,7 +244,19 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             end
             
             %TODO: Check that n_max doesn't exceed the # of triggers
-            
+
+            needs_defaults = isempty(in.channel_maps) || isempty(in.syncout_maps) || isempty(in.repeats);
+            if needs_defaults
+                try
+                    t = obj.getTrigger();
+                catch ME
+                    error(ERR_ID,...
+                        ['Unable to read existing trigger settings from the stimulator. ',...
+                        'Specify channel_maps, syncout_maps, and repeats/repeat_all explicitly. ',...
+                        'Original MCS error: %s'],ME.message)
+                end
+            end
+
             %Check length, must be the same or empty
             if isempty(in.channel_maps)
                 in.channel_maps = t.channel_maps.values(I:I+n_max-1);
@@ -300,12 +316,13 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             in.all = false;
             in.start_chan = 1;
+            in.fallback_to_empty = false;
             in = mcs.sl.in.processVarargin(in,varargin);
-            
+
             %TODO: If we knew the # of channels we could avoid
             %these calls if we specify all channels as inputs
-            a = uint32(obj.getChannelCapacity());
-            b = uint32(obj.getSyncCapacity());
+            [a,b] = obj.getChannelAndSyncCapacity(...
+                'fallback_to_empty',in.fallback_to_empty);
             
             if in.all
                 a(:) = chan_cap;
@@ -383,10 +400,22 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             obj.h.SetCapacity(a,b);
         end
-        function [chan_capacity,sync_capacity] = getChannelAndSyncCapacity(obj)
-            [a,b] = obj.h.GetCapacity();
-            chan_capacity = uint32(a);
-            sync_capacity = uint32(b);
+        function [chan_capacity,sync_capacity] = getChannelAndSyncCapacity(obj,varargin)
+            in.fallback_to_empty = false;
+            in = mcs.sl.in.processVarargin(in,varargin);
+
+            try
+                [a,b] = obj.h.GetCapacity();
+                chan_capacity = uint32(a);
+                sync_capacity = uint32(b);
+            catch ME
+                if ~in.fallback_to_empty
+                    rethrow(ME)
+                end
+
+                chan_capacity = zeros(1,obj.n_analog_channels,'uint32');
+                sync_capacity = zeros(1,obj.n_syncout_channels,'uint32');
+            end
         end
         function chan_capacity = getChannelCapacity(obj)
             %x Retrieve the # of bytes that each channel can store

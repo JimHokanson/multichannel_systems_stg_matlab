@@ -1357,9 +1357,9 @@ classdef pulse_train < matlab.mixin.Copyable
             %x Plot the stimuli
             %
             %   h = plot(obj)
-            
+
             in.dur_units = 's';
-            in = sl.in.processVarargin(in,varargin);
+            in = mcs.sl.in.processVarargin(in,varargin);
             
             
             
