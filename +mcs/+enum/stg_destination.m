@@ -35,16 +35,40 @@ function value_out = h__loadValue(value_in)
         %
         %These apparently relate to the use of stimulation headstages ...
         case 4
-            value_out = Mcs.Usb.STG_DestinationEnumNet.channeldata_current_and_boost_gnd_sync;  
+            value_out = h__firstExisting({...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_current_own_boost_gnd_sync,...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_current_and_boost_gnd_sync});  
         case 5
-            value_out = Mcs.Usb.STG_DestinationEnumNet.channeldata_current_and_sync;
+            value_out = h__firstExisting({...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_current_own_sync,...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_current_and_sync});
         case 6
             value_out = Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current;
         case 7
-            value_out = Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_and_boost_gnd_sync;
+            value_out = h__firstExisting({...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_own_boost_gnd_sync,...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_and_boost_gnd_sync});
         case 8
-            value_out = Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_and_sync;
+            value_out = h__firstExisting({...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_own_sync,...
+                @()Mcs.Usb.STG_DestinationEnumNet.channeldata_positive_current_and_sync});
     end
     
     
+end
+
+function value_out = h__firstExisting(getters)
+
+    last_error = [];
+    for i = 1:length(getters)
+        try
+            value_out = getters{i}();
+            return
+        catch ME
+            last_error = ME;
+        end
+    end
+
+    rethrow(last_error)
+
 end

@@ -154,7 +154,7 @@ classdef trigger < handle
 
             fprintf('   Channels =>   %s\n',char(49:48+obj.n_chans));
             cmap = obj.channel_maps.values;
-            for i = 1:obj.n_chans 
+            for i = 1:obj.n_triggers
                 if i == 2
                     first_string = 'Triggers =>  ';
                 else
@@ -164,16 +164,16 @@ classdef trigger < handle
                 fprintf('%s %d) %s\n',first_string,i,temp(1:obj.n_chans))
             end
             fprintf('\n');
-         	fprintf('   sync_out =>   %s\n',char(49:48+obj.n_chans));
+         	fprintf('   sync_out =>   %s\n',char(49:48+obj.n_syncs));
             smap = obj.syncout_maps.values;
-            for i = 1:obj.n_chans 
+            for i = 1:obj.n_triggers
                 if i == 2
                     first_string = 'Triggers =>  ';
                 else
                     first_string = '             ';
                 end
-                temp = fliplr(dec2bin(smap(i),obj.n_chans));
-                fprintf('%s %d) %s\n',first_string,i,temp(1:obj.n_chans));
+                temp = fliplr(dec2bin(smap(i),obj.n_syncs));
+                fprintf('%s %d) %s\n',first_string,i,temp(1:obj.n_syncs));
             end
             
         end

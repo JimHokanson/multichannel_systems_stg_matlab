@@ -1,9 +1,9 @@
-function varargout = stimGUI()
+function varargout = stimGUI(varargin)
 %
 %   mcs.stimGUI
 %
 
-gui = mcs.stg.stim_gui();
+gui = mcs.stg.stim_gui(varargin{:});
 
 if nargout
     varargout{1} = gui;

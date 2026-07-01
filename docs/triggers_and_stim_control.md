@@ -18,6 +18,12 @@ s.setupTrigger('linearize',true,'repeat_all',0);
 %Connects trigger 1 to channel 1, trigger 2 to channel 2, etc and sets all repeats to 0.
 ```
 
+The MCS download API uses bitmasks when starting and stopping triggers.
+For example, `startStim('triggers',1)` sends `SendStart(1)`, and
+`startStim('triggers',[1 3])` sends `SendStart(5)`. This matches the
+MCS Python stimulation example, where `SetupTrigger(0,...)` configures the
+first trigger and `SendStart(1)` starts trigger 1.
+
 Here's another example where I get a bit fancier with mapping triggers to channels. In this case trigger 1 controls channels 1 & 2. Trigger 2 controls channel 3 and trigger 3 controls channel 4.
 
 JAH NOTE: This is not currently working as expected. See e001_trigger_tests

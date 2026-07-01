@@ -56,8 +56,17 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
     properties
         d2 = '-------- mcs.stg.sdk.cstg200x_download_basic -------'
     end
- 
-   
+
+    properties (SetAccess = protected)
+        cached_trigger_channel_maps = uint32([])
+        cached_trigger_syncout_maps = uint32([])
+        cached_trigger_repeats = uint32([])
+        % Last trigger settings successfully written or read through this
+        % MATLAB object. This avoids querying GetTrigger during stimulation
+        % on devices where that request can stall.
+    end
+
+
     %More properties in:
     %   mcs.stg.sdk.cstg200x_basic
     properties (Dependent)
@@ -249,6 +258,9 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             if needs_defaults
                 try
                     t = obj.getTrigger();
+                    obj.cached_trigger_channel_maps = uint32(t.channel_maps.values);
+                    obj.cached_trigger_syncout_maps = uint32(t.syncout_maps.values);
+                    obj.cached_trigger_repeats = uint32(t.repeats);
                 catch ME
                     error(ERR_ID,...
                         ['Unable to read existing trigger settings from the stimulator. ',...
@@ -278,9 +290,12 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             
             %--------------------------------------------------------
             first_trigger_0b = in.first_trigger-1;
-            
+
             obj.h.SetupTrigger(uint32(first_trigger_0b),...
                 uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats));
+
+            obj.updateCachedTriggerSettings(...
+                I,uint32(in.channel_maps),uint32(in.syncout_maps),uint32(in.repeats));
         end
         function trigger = getTrigger(obj)
             %x Retrieves the trigger setup info
@@ -290,10 +305,34 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             %   trigger : mcs.stg.trigger
             
             h = obj.h;
-            
-            [c2,s2,r2] = GetTrigger(h);
-            
-            trigger = mcs.stg.trigger.fromSDK(obj,uint32(c2),uint32(s2),uint32(r2),...
+
+            try
+                [c2,s2,r2] = GetTrigger(h);
+                c2 = uint32(c2);
+                s2 = uint32(s2);
+                r2 = uint32(r2);
+
+                obj.cached_trigger_channel_maps = c2;
+                obj.cached_trigger_syncout_maps = s2;
+                obj.cached_trigger_repeats = r2;
+            catch ME
+                if isempty(obj.cached_trigger_channel_maps) || ...
+                        isempty(obj.cached_trigger_syncout_maps) || ...
+                        isempty(obj.cached_trigger_repeats)
+                    rethrow(ME)
+                end
+
+                warning('mcs:stg:sdk:cstg200x_download_basic:getTriggerCached',...
+                    ['Unable to read trigger settings from hardware; ',...
+                    'returning the settings cached by this MATLAB object. ',...
+                    'Original MCS error: %s'],ME.message)
+
+                c2 = obj.cached_trigger_channel_maps;
+                s2 = obj.cached_trigger_syncout_maps;
+                r2 = obj.cached_trigger_repeats;
+            end
+
+            trigger = mcs.stg.trigger.fromSDK(obj,c2,s2,r2,...
                 obj.n_analog_channels,obj.n_syncout_channels);
         end
         function setChannelAndSyncCapacity(obj,chan_cap,sync_cap,varargin)
@@ -430,7 +469,27 @@ classdef cstg200x_download_basic < mcs.stg.sdk.cstg200x_basic
             sync_capacity = uint32(b);
         end
     end
-    
+    methods (Access = protected)
+        function updateCachedTriggerSettings(obj,first_trigger_1b,channel_maps,syncout_maps,repeats)
+            n_required = first_trigger_1b + length(channel_maps) - 1;
+
+            if length(obj.cached_trigger_channel_maps) < n_required
+                obj.cached_trigger_channel_maps(n_required) = uint32(0);
+            end
+            if length(obj.cached_trigger_syncout_maps) < n_required
+                obj.cached_trigger_syncout_maps(n_required) = uint32(0);
+            end
+            if length(obj.cached_trigger_repeats) < n_required
+                obj.cached_trigger_repeats(n_required) = uint32(0);
+            end
+
+            idx = first_trigger_1b:n_required;
+            obj.cached_trigger_channel_maps(idx) = uint32(channel_maps);
+            obj.cached_trigger_syncout_maps(idx) = uint32(syncout_maps);
+            obj.cached_trigger_repeats(idx) = uint32(repeats);
+        end
+    end
+
 end
 
 %ClearChannelData

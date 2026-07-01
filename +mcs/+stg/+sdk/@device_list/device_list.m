@@ -34,7 +34,7 @@ classdef device_list < handle
             obj.device_filter = in.device_filter;
 
             mcs.stg.sdk.load();
-            obj.h = Mcs.Usb.CMcsUsbListNet();
+            obj.h = [];
             obj.update();
 
             %TODO: Support callbacks ...
@@ -50,7 +50,12 @@ classdef device_list < handle
     end
     methods (Hidden)
         function delete(obj)
-           obj.h.Dispose(); 
+            if ~isempty(obj.h)
+                try
+                    obj.h.Dispose();
+                catch
+                end
+            end
         end
     end
     methods
@@ -62,16 +67,35 @@ classdef device_list < handle
             in = mcs.sl.in.processVarargin(in,varargin);
             obj.device_filter = in.device_filter;
 
-            %   'Initialize' - Initialize/Update the list of devices
-            %   which are currently connected to the computer.
-            switch lower(in.device_filter)
-                case {'stg','stimulator','stimulators'}
-                    obj.initializeStgDevices();
-                case {'any','all'}
-                    obj.h.Initialize(Mcs.Usb.DeviceEnumNet.MCS_DEVICE_ANY);
-                otherwise
-                    error('mcs:stg:device_list:update',...
-                        'Unrecognized device_filter: %s',in.device_filter)
+            if isempty(obj.h)
+                try
+                    obj.h = obj.createLegacyDeviceList();
+                catch ME
+                    if ~obj.shouldUseConstructorEnumeration(ME)
+                        rethrow(ME)
+                    end
+                    obj.replaceHandle(obj.createInitializedList(in.device_filter));
+                    return
+                end
+            end
+
+            try
+                %   'Initialize' - Initialize/Update the list of devices
+                %   which are currently connected to the computer.
+                switch lower(in.device_filter)
+                    case {'stg','stimulator','stimulators'}
+                        obj.initializeStgDevices();
+                    case {'any','all'}
+                        obj.h.Initialize(Mcs.Usb.DeviceEnumNet.MCS_DEVICE_ANY);
+                    otherwise
+                        error('mcs:stg:device_list:update',...
+                            'Unrecognized device_filter: %s',in.device_filter)
+                end
+            catch ME
+                if ~obj.shouldUseConstructorEnumeration(ME)
+                    rethrow(ME)
+                end
+                obj.replaceHandle(obj.createInitializedList(in.device_filter));
             end
 
             %deviceList.Initialize(DeviceEnumNet.MCS_STG_DEVICE);
@@ -129,6 +153,61 @@ classdef device_list < handle
         end
     end
     methods (Access = private)
+        function h = createLegacyDeviceList(obj) %#ok<MANU>
+            h = Mcs.Usb.CMcsUsbListNet();
+        end
+        function h = createInitializedList(obj,device_filter)
+            switch lower(device_filter)
+                case {'stg','stimulator','stimulators'}
+                    h = obj.createStgInitializedList();
+                case {'any','all'}
+                    h = Mcs.Usb.CMcsUsbListNet(Mcs.Usb.DeviceEnumNet.MCS_DEVICE_ANY);
+                otherwise
+                    error('mcs:stg:device_list:update',...
+                        'Unrecognized device_filter: %s',device_filter)
+            end
+        end
+        function h = createStgInitializedList(obj)
+            h = obj.tryCreateInitializedList(Mcs.Usb.DeviceEnumNet.MCS_STG_DEVICE);
+            if ~isempty(h) && double(h.Count) > 0
+                return
+            end
+            obj.disposeHandle(h);
+
+            try
+                h = Mcs.Usb.CMcsUsbListNet(obj.getKnownStgDeviceIds());
+                if double(h.Count) > 0
+                    return
+                end
+                obj.disposeHandle(h);
+            catch
+            end
+
+            h = Mcs.Usb.CMcsUsbListNet(Mcs.Usb.DeviceEnumNet.MCS_DEVICE_USB);
+            if double(h.Count) == 0
+                obj.disposeHandle(h);
+                h = Mcs.Usb.CMcsUsbListNet(Mcs.Usb.DeviceEnumNet.MCS_DEVICE_ANY);
+            end
+        end
+        function h = tryCreateInitializedList(obj,device_enum) %#ok<INUSL>
+            try
+                h = Mcs.Usb.CMcsUsbListNet(device_enum);
+            catch
+                h = [];
+            end
+        end
+        function replaceHandle(obj,new_h)
+            obj.disposeHandle(obj.h);
+            obj.h = new_h;
+        end
+        function disposeHandle(obj,h) %#ok<INUSL>
+            if ~isempty(h)
+                try
+                    h.Dispose();
+                catch
+                end
+            end
+        end
         function initializeStgDevices(obj)
             % Prefer the SDK's STG group, then include newer STG5 IDs that
             % are absent from the bundled 3.2.71 enum names.
@@ -180,6 +259,13 @@ classdef device_list < handle
         end
         function tf = isStgFilter(filter)
             tf = any(strcmpi(filter,{'stg','stimulator','stimulators'}));
+        end
+        function tf = shouldUseConstructorEnumeration(ME)
+            message = lower(ME.message);
+            tf = contains(message,'no constructor') || ...
+                contains(message,'no method') || ...
+                contains(message,'matching constructor') || ...
+                contains(message,'initialize');
         end
     end
 

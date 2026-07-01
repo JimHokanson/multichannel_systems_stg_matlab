@@ -454,6 +454,7 @@ classdef pulse_train < matlab.mixin.Copyable
             
             obj.amplitudes = [waveform.amplitudes 0];
             obj.durations = [waveform.durations_s between_pulse_dt];
+            obj.output_type = waveform.output_type;
             h__roundDurations(obj,in)
             h__initTimes(obj);
             if n_pulses > 1
@@ -1225,8 +1226,14 @@ classdef pulse_train < matlab.mixin.Copyable
                 error('dt for sampling is not a multiple of the minimum dt value')
             end
             
-            a = int32(1000*obj.amplitudes);
-            d = uint64(1e6*obj.durations);
+            keep = obj.durations > 0;
+            if ~any(keep)
+                error('mcs:stg:pulse_train:getStimValues',...
+                    'At least one duration must be greater than 0.')
+            end
+
+            a = int32(1000*obj.amplitudes(keep));
+            d = uint64(1e6*obj.durations(keep));
                         
         end %end getStimValues
         function varargout = normalizeToPlusMinusOne(obj)
@@ -1441,6 +1448,7 @@ end
 in.amp_units = mcs.stg.pulse_train.CURRENT_UNITS;
 in.dur_units = mcs.stg.pulse_train.TIME_UNITS;
 in.waveform = [];
+in.output_type = 'current';
 
 if is_constructor
     in.min_time_dt = mcs.stg.pulse_train.DEFAULT_MIN_TIME_DT;
@@ -1456,6 +1464,7 @@ in = mcs.sl.in.processVarargin(in,var);
 if is_constructor
     if ~isempty(in.waveform)
         in.amp_units = in.waveform.user_amp_units;
+        in.output_type = in.waveform.output_type;
     end
     
     h__populateUnitsInfo(obj,in.amp_units,in.dur_units)

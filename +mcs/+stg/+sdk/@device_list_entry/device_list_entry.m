@@ -31,16 +31,16 @@ classdef device_list_entry < handle
             %TODO: We could make this lazy ...
 
             try
-                obj.device_id = mcs.stg.device_id(h.DeviceId);
+                obj.device_id = mcs.stg.device_id(obj.getValue(h,{'DeviceId','DeviceID'}));
             catch
                 obj.device_id = [];
             end
-            obj.device_path = char(h.DevicePath);
-            obj.hw_version = char(h.HwVersion);
-            obj.serial_number = char(h.SerialNumber);
-            obj.device_name = char(h.DeviceName);
-            obj.product = char(h.Product);
-            obj.manufacturer = char(h.Manufacturer);
+            obj.device_path = obj.getCharValue(h,{'DevicePath','Path','InterfacePath'});
+            obj.hw_version = obj.getCharValue(h,{'HwVersion','HardwareVersion'});
+            obj.serial_number = obj.getCharValue(h,{'SerialNumber','SerialNo','Serial'});
+            obj.device_name = obj.getCharValue(h,{'DeviceName','Name'});
+            obj.product = obj.getCharValue(h,{'Product','ProductName'});
+            obj.manufacturer = obj.getCharValue(h,{'Manufacturer','ManufacturerName'});
         end
         function device = getDownloadInterface(obj)
             %
@@ -57,9 +57,49 @@ classdef device_list_entry < handle
             %One reason for failure is if we've already connected to the
             %device and subsequently the device is locked
             error_code = d.Connect(obj.h);
+            if error_code ~= 0
+                try
+                    d.Disconnect();
+                catch
+                end
+                try
+                    d.Dispose();
+                catch
+                end
+                try
+                    delete(d);
+                catch
+                end
+            end
             mcs.stg.sdk.handleError(ERR_ID,'Failed to connect to the device',error_code)
-            
+
             device = mcs.stg.sdk.cstg200x_download(d,obj);
+        end
+    end
+    methods (Static, Access = private)
+        function value = getValue(h,property_names)
+            for i = 1:length(property_names)
+                try
+                    value = h.(property_names{i});
+                    return
+                catch
+                end
+            end
+            error('mcs:stg:device_list_entry:getValue',...
+                'None of the requested properties were available.')
+        end
+        function value = getCharValue(h,property_names)
+            for i = 1:length(property_names)
+                try
+                    raw_value = h.(property_names{i});
+                    if ~isempty(raw_value)
+                        value = char(raw_value);
+                        return
+                    end
+                catch
+                end
+            end
+            value = '';
         end
     end
 
