@@ -134,7 +134,7 @@ classdef waveform < handle
             
             in.amp_units = 'uA';
            
-            in.duration_units = 'ms';
+            in.duration_units = 'us';
           
             in = mcs.sl.in.processVarargin(in,varargin);
             
