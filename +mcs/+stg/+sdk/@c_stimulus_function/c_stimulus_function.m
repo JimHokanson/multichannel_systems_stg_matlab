@@ -15,7 +15,7 @@ classdef c_stimulus_function
     %{
     s = d.stimulus
     pt = 500*mcs.stg.pulse_train.fixed_rate(40);
-    wtf = s.prepareData(pt);
+    prepared = s.prepareData(pt);
     %}
     
     properties (Hidden)
@@ -65,7 +65,7 @@ classdef c_stimulus_function
             %   prepareSyncData
             %   mcs.stg.sdk.cstg200x_download.sentDataToDevice
             
-            %var preparedData = device.Stimulus.PrepareData(amplitude, duration,    STG_DestinationEnumNet.channeldata_voltage);
+            %var preparedData = device.Stimulus.PrepareData(channel, amplitude, duration, STG_DestinationEnumNet.channeldata_voltage);
             %int lengthInBytes = preparedData.DeviceDataLength;
             
 
@@ -73,16 +73,18 @@ classdef c_stimulus_function
                 a = data.a;
                 d = data.d;
                 type = data.type;
+                channel_0b = h__getChannel0b(data);
             else
                 [a,d] = data.getStimValues();
-            	if strcmp(data.output_type,'voltage')
+                if strcmp(data.output_type,'voltage')
                    type = mcs.enum.stg_destination.voltage;
                 else
                    type = mcs.enum.stg_destination.current;
                 end
+                channel_0b = int32(0);
             end
 
-            value = obj.h.PrepareData(a,d,type);
+            value = h__prepareData(obj.h,channel_0b,a,d,type);
         end
         function value = prepareSyncData(obj,data)
             %
@@ -95,12 +97,14 @@ classdef c_stimulus_function
             if isstruct(data)
                 a = data.s; %Note we use s here for sync
                 d = data.sd;
+                channel_0b = h__getChannel0b(data);
             else
                 [a,d] = data.getStimValues();
                 a(a ~= 0) = 1;
+                channel_0b = int32(0);
             end
             type = mcs.enum.stg_destination.sync;
-            value = obj.h.PrepareData(a,d,type);
+            value = h__prepareData(obj.h,channel_0b,a,d,type);
         end
         function clearSyncData(obj)
             %TODO: I'm not sure how to call this since no documentation
@@ -141,3 +145,26 @@ StopPoll
 ToString                
 
 %}
+function channel_0b = h__getChannel0b(data)
+
+    if isfield(data,'id') && ~isempty(data.id)
+        channel_0b = int32(data.id - 1);
+    else
+        channel_0b = int32(0);
+    end
+
+end
+
+function value = h__prepareData(h,channel_0b,a,d,type)
+
+    try
+        value = h.PrepareData(channel_0b,a,d,type);
+    catch ME
+        if ~contains(ME.message,'No method') && ...
+                ~contains(ME.message,'matching signature')
+            rethrow(ME)
+        end
+        value = h.PrepareData(a,d,type);
+    end
+
+end

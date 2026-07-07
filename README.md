@@ -59,6 +59,77 @@ s.stopStim;
 
 ```
 
+### Updating an idle channel while another channel is running
+
+Download mode can replace data for a single channel with `PrepareAndSendData`,
+but changing the channel/sync capacity can rewrite STG memory. On devices that
+use explicit capacity allocation, reserve capacity before starting stimulation,
+then update only an idle, pre-reserved channel:
+
+```matlab
+s = mcs.getStimulator();
+s.setupTrigger('linearize',true,'repeat_all',0);
+
+if s.usesExplicitCapacityAllocation()
+    pt2_capacity = 1000*mcs.getFixedRatePattern(100,'n_pulses',5);
+    s.reserveChannelCapacity(2,pt2_capacity);
+end
+
+pt1 = 500*mcs.getFixedRatePattern(10);
+s.sentDataToDevice(1,pt1);
+s.startStim('triggers',1);
+
+% Later, while channel 1 continues running:
+pt2 = 250*mcs.getFixedRatePattern(40,'n_pulses',3);
+s.updateChannelData(2,pt2);
+s.startStim('triggers',2);
+```
+
+`updateChannelData()` refuses to resize memory, and it refuses to replace data
+on a channel that is mapped to a trigger known active through the same MATLAB
+object. On drivers that do not expose `GetCapacity`/`SetCapacity`, the wrapper
+sends runtime uploads directly to the idle target channel without pre-verifying
+reserved capacity. See `examples/e003_runtime_channel_update.m`.
+
+### Multi-channel GUI
+
+The stimulation GUI shows one row per channel, each with independent amplitude,
+frequency, pulse width, units, hardware range/resolution, status, and
+start/stop controls. A running channel's parameter controls are disabled; stop
+that channel before editing or uploading new parameters for it. Other active
+channels continue running while a different idle channel is edited or started.
+
+```matlab
+gui = mcs.stimGUI();
+```
+
+If MATLAB reports that the device is locked after a previous GUI run, close
+any open stim GUI window or run:
+
+```matlab
+mcs.closeStimGUI();
+clear classes;
+gui = mcs.stimGUI();
+```
+
+`mcs.closeStimGUI()` stops stimulation controlled by an existing stim GUI while
+it releases that GUI's device handle.
+
+See `examples/e004_multichannel_stim_gui.m`.
+
+### STG5 diagnostics
+
+Run the non-stimulating STG5 diagnostic to confirm the driver can connect,
+print voltage/current range and resolution values, and rewrite the linear
+trigger map used by the GUI:
+
+```matlab
+examples/e005_stg5_diagnostics
+```
+
+This diagnostic does not call `SendStart`. For oscilloscope checks in current
+mode, measure across a load resistor; see `docs/relevant_hardware_specs.md`.
+
 ## Dependencies
 
 The driver necessary for this code is included. You might need to have MC Stimulus II installed as well ...
@@ -69,7 +140,7 @@ This code relies on a driver provided by MCS.
 
 https://www.multichannelsystems.com/software/mcsusbnetdll
 
-I've found some bugs in the driver and others may still remain (so test your code). I've downloaded the driver and placed it into the code. (See /+mcs/+stg/@sdk - currently in a version folder of 3_2_71).
+I've found some bugs in the driver and others may still remain (so test your code). I've downloaded the driver and placed it into the code. (See /+mcs/+stg/@sdk - currently using version folder 5_2_3 by default; older 3_2_71 files are retained for reference).
 
 Documentation for the driver is provided in 'McsUsbNet_for_STG.chm'
 

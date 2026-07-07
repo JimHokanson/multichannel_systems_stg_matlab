@@ -30,10 +30,21 @@ classdef cstg200x_basic < handle
         driver_version
         d1 = '---- mcs.stg.sdk.cstg200x_basic ----'
         serial_number
+        device_id
+        device_product
+        device_name
         channel_modes
+    end
+
+    properties (SetAccess = protected)
+        active_triggers_1b = []
+        % Triggers started through this MATLAB object and not yet stopped
+        % through it. Finite-repeat triggers may finish in hardware before
+        % this conservative bookkeeping is cleared by stopStim().
     end
     
     properties (Dependent)
+        current_range_nA
         current_resolution_nA
         n_analog_channels
         n_syncout_channels
@@ -44,11 +55,19 @@ classdef cstg200x_basic < handle
         %  	output_rate
         
         version_info
+        voltage_range_uV
         voltage_resolution_uV
         total_memory
     end
     
     methods
+        function value = get.current_range_nA(obj)
+            n_chans = obj.n_analog_channels;
+            value = zeros(1,n_chans);
+            for i = 1:n_chans
+                value(i) = double(obj.h.GetCurrentRangeInNanoAmp(i-1));
+            end
+        end
         function value = get.current_resolution_nA(obj)
             n_chans = obj.n_analog_channels;
             value = zeros(1,n_chans);
@@ -90,6 +109,13 @@ classdef cstg200x_basic < handle
             value.hardware_version = char(b);
             
         end
+        function value = get.voltage_range_uV(obj)
+            n_chans = obj.n_analog_channels;
+            value = zeros(1,n_chans);
+            for i = 1:n_chans
+                value(i) = double(obj.h.GetVoltageRangeInMicroVolt(i-1));
+            end
+        end
         function value = get.voltage_resolution_uV(obj)
             n_chans = obj.n_analog_channels;
             value = zeros(1,n_chans);
@@ -101,13 +127,35 @@ classdef cstg200x_basic < handle
     end
     
     methods
-        function obj = cstg200x_basic(h)
+        function obj = cstg200x_basic(h,source_entry)
+            if nargin < 2
+                source_entry = [];
+            end
+
             obj.h = h;
-            
+
             obj.driver_version = mcs.stg.sdk.DRIVER_VERSION;
-            
+
             obj.serial_number = char(h.SerialNumber);
-            
+            try
+                obj.device_id = mcs.stg.device_id(h.GetDeviceId());
+            catch
+                obj.device_id = [];
+            end
+
+            obj.device_product = '';
+            obj.device_name = '';
+            if ~isempty(source_entry)
+                if isempty(obj.device_id)
+                    obj.device_id = source_entry.device_id;
+                end
+                obj.device_product = source_entry.product;
+                obj.device_name = source_entry.device_name;
+                if isempty(obj.serial_number)
+                    obj.serial_number = source_entry.serial_number;
+                end
+            end
+
             if isempty(obj.serial_number)
                 error('Empty serial number, something is wrong ...')
             end
@@ -115,7 +163,9 @@ classdef cstg200x_basic < handle
             %Set channel modes
             n_chans = h.GetNumberOfAnalogChannels;
             obj.channel_modes = repmat({'c'},1,n_chans);
-            obj.setCurrentMode();
+            if ~obj.usesDownloadDestinationOutputMode()
+                obj.setCurrentMode();
+            end
         end
     end
     
@@ -137,6 +187,47 @@ classdef cstg200x_basic < handle
         end
         function getAnalogResolution(obj)
             %NYI
+        end
+        function info = getOutputResolutionInfo(obj,channels_1b)
+            %x Return per-channel output range and resolution information.
+            %
+            %   info = getOutputResolutionInfo(obj,*channels_1b)
+            %
+            % Values mirror the MCS driver units:
+            %   current range/resolution: nA
+            %   voltage range/resolution: uV
+            %
+            % The MCS Python stimulation example prints these values before
+            % downloading data; exposing them here makes the same hardware
+            % check available from MATLAB and the GUI.
+
+            if nargin < 2 || isempty(channels_1b)
+                channels_1b = 1:obj.n_analog_channels;
+            end
+
+            channels_1b = double(channels_1b(:)');
+            n_channels = length(channels_1b);
+
+            info = repmat(struct(...
+                'channel',[],...
+                'current_range_nA',[],...
+                'current_resolution_nA',[],...
+                'voltage_range_uV',[],...
+                'voltage_resolution_uV',[]),1,n_channels);
+
+            current_range = obj.current_range_nA;
+            current_resolution = obj.current_resolution_nA;
+            voltage_range = obj.voltage_range_uV;
+            voltage_resolution = obj.voltage_resolution_uV;
+
+            for i = 1:n_channels
+                cur_chan = channels_1b(i);
+                info(i).channel = cur_chan;
+                info(i).current_range_nA = current_range(cur_chan);
+                info(i).current_resolution_nA = current_resolution(cur_chan);
+                info(i).voltage_range_uV = voltage_range(cur_chan);
+                info(i).voltage_resolution_uV = voltage_resolution(cur_chan);
+            end
         end
         function startStim(obj,varargin)
             %x Start the program
@@ -171,9 +262,11 @@ classdef cstg200x_basic < handle
             end
             
             trigger_map = mcs.utils.bitmask({in.triggers});
-            
+
             %TODO: Document what this is looking for ...
             obj.h.SendStart(uint32(trigger_map.values));
+
+            obj.active_triggers_1b = unique([obj.active_triggers_1b double(in.triggers)]);
         end
         function stopStim(obj,varargin)
             %x Stop stimulating
@@ -206,6 +299,8 @@ classdef cstg200x_basic < handle
             trigger_map = mcs.utils.bitmask({in.triggers});
 
             obj.h.SendStop(trigger_map.values);
+
+            obj.active_triggers_1b = setdiff(obj.active_triggers_1b,double(in.triggers));
         end
         function setCurrentMode(obj,channels_1b)
             %x Enable current-controlled stimulation on a set of channels
@@ -222,7 +317,16 @@ classdef cstg200x_basic < handle
             
             
             % n_chans = obj.n_analog_channels;
-            
+
+            if obj.usesDownloadDestinationOutputMode()
+                if nargin == 1
+                    obj.channel_modes(:) = {'c'};
+                else
+                    obj.channel_modes(channels_1b) = {'c'};
+                end
+                return
+            end
+
             if nargin == 1
                 obj.h.SetCurrentMode();
                 obj.channel_modes(:) = {'c'};
@@ -235,8 +339,17 @@ classdef cstg200x_basic < handle
         function setVoltageMode(obj,channels_1b)
             %x Enable voltage-controlled stimulation on a set of channels
             %
-            %   
-            
+            %
+
+            if obj.usesDownloadDestinationOutputMode()
+                if nargin == 1
+                    obj.channel_modes(:) = {'v'};
+                else
+                    obj.channel_modes(channels_1b) = {'v'};
+                end
+                return
+            end
+
             if nargin == 1
                 obj.channel_modes(:) = {'v'};
                 obj.h.SetVoltageMode();
@@ -245,8 +358,53 @@ classdef cstg200x_basic < handle
                 obj.h.SetVoltageMode(channels_1b - 1);
             end
         end
+        function tf = usesDownloadDestinationOutputMode(obj)
+            %x STG5 chooses current/voltage via download destination.
+            %
+            % The bundled 3.2.71 SDK documents SetCurrentMode and
+            % SetVoltageMode as STG3008-FA/STG400x only. STG5 products are
+            % C248, C249, and C24A in MC_Stimulus III driver INF files.
+
+            tf = false;
+            device_text = lower(sprintf('%s %s',obj.device_product,obj.device_name));
+            if contains(device_text,'stg5')
+                tf = true;
+                return
+            end
+
+            if isempty(obj.device_id)
+                return
+            end
+
+            product_text = lower(char(obj.device_id.product.ToString()));
+            product_hex = '';
+            try
+                product_hex = lower(dec2hex(int32(obj.device_id.product)));
+            catch
+            end
+
+            product_text = sprintf('%s %s',product_text,product_hex);
+            tf = contains(product_text,'49736') || ... % 0xC248 STG5
+                contains(product_text,'49737') || ...  % 0xC249 STG5-HV
+                contains(product_text,'49738') || ...  % 0xC24A STG5-Opto
+                contains(product_text,'c248') || ...
+                contains(product_text,'c249') || ...
+                contains(product_text,'c24a') || ...
+                contains(product_text,'stg5');
+        end
+        function tf = usesExplicitCapacityAllocation(obj)
+            %x Return true when the download driver exposes Get/SetCapacity.
+
+            try
+                method_names = methods(obj.h);
+                tf = any(strcmp(method_names,'GetCapacity')) && ...
+                    any(strcmp(method_names,'SetCapacity'));
+            catch
+                tf = false;
+            end
+        end
     end
-    
+
 end
 
 

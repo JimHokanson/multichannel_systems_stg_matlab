@@ -16,7 +16,7 @@ classdef (Hidden) test__pulse_train
             
             pt = fh_fixed(22.1,'pulses_duration',2);
             
-            pulse_width = 30; %not realizable
+            pulse_width = 40; %realizable with the default 20 us timing step
             w = mcs.stg.waveform.monophasic(1,pulse_width,'amp_units','mA','duration_units','us');
             pt = fh_fixed(22.1,'pulses_duration',2,'waveform',w);
             
@@ -33,7 +33,7 @@ classdef (Hidden) test__pulse_train
             %--------------------------------------------------------------
             % 1) --- Expand, allowing overall time growth
             pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
-            delta_t = 50/1e6; %50 us
+            delta_t = 40/1e6; %40 us
             %Only expand positive values
             pt2 = pt.leftExpandDurations(delta_t,'mask',pt.amplitudes > 0,'allow_expanding_time',true);
             
@@ -41,9 +41,11 @@ classdef (Hidden) test__pulse_train
             pt = mcs.stg.pulse_train.fixed_rate(10,'n_pulses',100);
             %Add 0.5 seconds with no amplitude
             pt.prependValues(0,0.5);
-            delta_t = 50/1e6; %50 us
+            delta_t = 40/1e6; %40 us
             
         end
         
         
     end
+
+end
